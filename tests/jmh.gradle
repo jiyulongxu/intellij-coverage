@@ -21,7 +21,7 @@ ext {
   benchmarkIterations = 10
   benchmarkWarmupIterations = 10
   benchmarkRegexp = 'com\\.intellij\\.rt\\.coverage\\.jmh\\.CoverageAgentBenchmark.*'
-  benchmarkMode = 'avgt'
+  benchmarkMode = 'ss'
   benchmarkAgentName = coverage_jar_name
   benchmarkExtraAgentArgs = "=coverage.ic false false false true org\\.joda.*"
 }
