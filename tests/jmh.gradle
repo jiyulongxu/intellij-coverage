@@ -18,8 +18,8 @@ apply from: project(":benchmarks").file("jmh.gradle")
 
 ext {
   baselineVersion = '1.0.573'
-  benchmarkIterations = 1
-  benchmarkWarmupIterations = 0
+  benchmarkIterations = 10
+  benchmarkWarmupIterations = 10
   benchmarkRegexp = 'com\\.intellij\\.rt\\.coverage\\.jmh\\.CoverageAgentBenchmark.*'
   benchmarkMode = 'avgt'
   benchmarkAgentName = coverage_jar_name
