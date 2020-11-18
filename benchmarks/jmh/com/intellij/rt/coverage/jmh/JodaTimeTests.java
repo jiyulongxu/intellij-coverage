@@ -46,4 +46,8 @@ public class JodaTimeTests {
       }
     });
   }
+
+  public static void testCoverage() throws Exception {
+    runTests(new TestRunner());
+  }
 }
