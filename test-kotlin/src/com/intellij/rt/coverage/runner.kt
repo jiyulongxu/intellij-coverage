@@ -30,7 +30,7 @@ fun runWithCoverage(coverageDataFile: File, testName: String, sampling: Boolean)
 }
 
 internal fun assertEqualsLines(project: ProjectData, expectedLines: Map<Int, String>, classNames: List<String>) {
-    val allData = ClassData("")
+    val allData = ClassData("", 0)
     classNames
             .map { project.getClassData(it) }
             .forEach { allData.merge(it) }

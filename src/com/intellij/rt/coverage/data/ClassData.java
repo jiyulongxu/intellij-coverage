@@ -27,13 +27,19 @@ import java.util.*;
 
 public class ClassData implements CoverageData {
   private final String myClassName;
+  private final int myIndex;
   private LineData[] myLinesArray;
   private Map<String, Integer> myStatus;
   private int[] myLineMask;
   private String mySource;
 
-  public ClassData(final String name) {
+  public ClassData(final String name, int index) {
     myClassName = name;
+    myIndex = index;
+  }
+
+  public int getIndex() {
+    return myIndex;
   }
 
   public String getName() {

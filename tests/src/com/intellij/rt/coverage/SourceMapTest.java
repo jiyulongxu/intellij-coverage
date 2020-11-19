@@ -137,7 +137,7 @@ public class SourceMapTest extends TestCase {
   private Map<String, ClassData> createMap(final String[] strings) {
     HashMap<String, ClassData> map = new HashMap<String, ClassData>(strings.length / 2);
     for (int i = 0; i < strings.length; i += 2) {
-      final ClassData clData = new ClassData(strings[i]);
+      final ClassData clData = new ClassData(strings[i], 0);
       clData.setSource(strings[i + 1]);
       map.put(strings[i], clData);
     }

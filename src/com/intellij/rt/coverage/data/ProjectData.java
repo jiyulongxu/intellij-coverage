@@ -17,6 +17,7 @@
 package com.intellij.rt.coverage.data;
 
 import com.intellij.rt.coverage.util.ErrorReporter;
+import org.jetbrains.coverage.gnu.trove.TIntObjectHashMap;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
@@ -25,6 +26,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ProjectData implements CoverageData, Serializable {
   public static final String PROJECT_DATA_OWNER = "com/intellij/rt/coverage/data/ProjectData";
@@ -48,6 +50,7 @@ public class ProjectData implements CoverageData, Serializable {
   private boolean mySampling;
   private Map<ClassData, boolean[]> myTrace;
   private File myTracesDir;
+  private final AtomicInteger myClassesCounter = new AtomicInteger(0);
 
   private final ClassesMap myClasses = new ClassesMap();
   private Map<String, FileMapData[]> myLinesMap;
@@ -58,10 +61,14 @@ public class ProjectData implements CoverageData, Serializable {
     return myClasses.get(name);
   }
 
+  public ClassData getClassData(int index) {
+    return myClasses.get(index);
+  }
+
   public ClassData getOrCreateClassData(String name) {
     ClassData classData = myClasses.get(name);
     if (classData == null) {
-      classData = new ClassData(name);
+      classData = new ClassData(name, myClassesCounter.getAndIncrement());
       myClasses.put(name, classData);
     }
     return classData;
@@ -106,7 +113,7 @@ public class ProjectData implements CoverageData, Serializable {
       final ClassData mergedData = projectData.myClasses.get(key);
       ClassData classData = myClasses.get(key);
       if (classData == null) {
-        classData = new ClassData(mergedData.getName());
+        classData = new ClassData(mergedData.getName(), myClassesCounter.getAndIncrement());
         myClasses.put(key, classData);
       }
       classData.merge(mergedData);
@@ -318,6 +325,19 @@ public class ProjectData implements CoverageData, Serializable {
     }
   }
 
+  public static Object loadClassData(int index) {
+    if (ourProjectData != null) {
+      return ourProjectData.getClassData(index);
+    }
+    try {
+      final Object projectDataObject = getProjectDataObject();
+      return GET_CLASS_DATA_METHOD.invoke(projectDataObject, new Object[]{index});
+    } catch (Exception e) {
+      ErrorReporter.reportError("Error in class data loading: " + index, e);
+      return null;
+    }
+  }
+
   private static Object getProjectDataObject() throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
     if (ourProjectDataObject == null) {
       final Class projectDataClass = Class.forName(ProjectData.class.getName(), false, null);
@@ -381,22 +401,28 @@ public class ProjectData implements CoverageData, Serializable {
     private static final int POOL_SIZE = 1000;
     private final IdentityClassData[] myIdentityArray = new IdentityClassData[POOL_SIZE];
     private final Map<String, ClassData> myClasses = new HashMap<String, ClassData>(1000);
+    private final TIntObjectHashMap<ClassData> myIndexToCLass = new TIntObjectHashMap<ClassData>();
 
     public ClassData get(String name) {
-      int idx = Math.abs(name.hashCode() % POOL_SIZE);
+      return myClasses.get(name);
+    }
+
+    public ClassData get(int index) {
+      int idx = Math.abs(index % POOL_SIZE);
       final IdentityClassData lastClassData = myIdentityArray[idx];
       if (lastClassData != null) {
-        final ClassData data = lastClassData.getClassData(name);
+        final ClassData data = lastClassData.getClassData(index);
         if (data != null) return data;
       }
 
-      final ClassData data = myClasses.get(name);
-      myIdentityArray[idx] = new IdentityClassData(name, data);
+      final ClassData data = myIndexToCLass.get(index);
+      myIdentityArray[idx] = new IdentityClassData(index, data);
       return data;
     }
 
     public void put(String name, ClassData data) {
       myClasses.put(name, data);
+      myIndexToCLass.put(data.getIndex(), data);
     }
 
     public HashMap<String, ClassData> asMap() {
@@ -409,16 +435,16 @@ public class ProjectData implements CoverageData, Serializable {
   }
 
   private static class IdentityClassData {
-    private final String myClassName;
+    private final int myIndex;
     private final ClassData myClassData;
 
-    private IdentityClassData(String className, ClassData classData) {
-      myClassName = className;
+    private IdentityClassData(int index, ClassData classData) {
+      myIndex = index;
       myClassData = classData;
     }
 
-    public ClassData getClassData(String name) {
-      if (name == myClassName) {
+    public ClassData getClassData(int index) {
+      if (index == myIndex) {
         return myClassData;
       }
       return null;
