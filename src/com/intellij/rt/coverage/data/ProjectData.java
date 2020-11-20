@@ -398,25 +398,23 @@ public class ProjectData implements CoverageData, Serializable {
    * This class was introduced to reduce number of equals().
    */
   private static class ClassesMap {
-    private static final int POOL_SIZE = 1000;
-    private final IdentityClassData[] myIdentityArray = new IdentityClassData[POOL_SIZE];
+    private static final int POOL_SIZE = 1024; // must be a power of two
+    private static final int MASK = POOL_SIZE - 1;
+    private final ClassData[] myClassesArray = new ClassData[POOL_SIZE];
     private final Map<String, ClassData> myClasses = new HashMap<String, ClassData>(1000);
-    private final TIntObjectHashMap<ClassData> myIndexToCLass = new TIntObjectHashMap<ClassData>();
+    private final TIntObjectHashMap<ClassData> myIndexToCLass = new TIntObjectHashMap<ClassData>(1000);
 
     public ClassData get(String name) {
       return myClasses.get(name);
     }
 
     public ClassData get(int index) {
-      int idx = Math.abs(index % POOL_SIZE);
-      final IdentityClassData lastClassData = myIdentityArray[idx];
-      if (lastClassData != null) {
-        final ClassData data = lastClassData.getClassData(index);
-        if (data != null) return data;
-      }
+      int idx = index & MASK;
+      final ClassData lastClassData = myClassesArray[idx];
+      if (lastClassData != null && lastClassData.getIndex() == index) return lastClassData;
 
       final ClassData data = myIndexToCLass.get(index);
-      myIdentityArray[idx] = new IdentityClassData(index, data);
+      myClassesArray[idx] = data;
       return data;
     }
 
@@ -431,23 +429,6 @@ public class ProjectData implements CoverageData, Serializable {
 
     public Collection<String> names() {
       return myClasses.keySet();
-    }
-  }
-
-  private static class IdentityClassData {
-    private final int myIndex;
-    private final ClassData myClassData;
-
-    private IdentityClassData(int index, ClassData classData) {
-      myIndex = index;
-      myClassData = classData;
-    }
-
-    public ClassData getClassData(int index) {
-      if (index == myIndex) {
-        return myClassData;
-      }
-      return null;
     }
   }
 
