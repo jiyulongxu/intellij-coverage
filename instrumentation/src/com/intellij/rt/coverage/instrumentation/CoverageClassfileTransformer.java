@@ -44,7 +44,8 @@ public class CoverageClassfileTransformer extends AbstractIntellijClassfileTrans
   @Override
   protected ClassVisitor createClassVisitor(String className, ClassLoader loader, ClassReader cr, ClassWriter cw) {
     if (data.isSampling()) {
-      if (System.getProperty("idea.new.sampling.coverage") != null) {
+      ClassInfo info = new ClassInfo(cr);
+      if (System.getProperty("idea.new.sampling.coverage") != null && !info.isInterface()) {
         //wrap cw with new TraceClassVisitor(cw, new PrintWriter(new StringWriter())) to get readable bytecode
         return new NewSamplingInstrumenter(data, cw, cr, className, shouldCalculateSource);
       } else {

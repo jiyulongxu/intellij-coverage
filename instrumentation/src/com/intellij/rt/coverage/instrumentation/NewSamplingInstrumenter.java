@@ -16,90 +16,36 @@
 
 package com.intellij.rt.coverage.instrumentation;
 
-import com.intellij.rt.coverage.data.ClassData;
 import com.intellij.rt.coverage.data.LineData;
 import com.intellij.rt.coverage.data.ProjectData;
-import com.intellij.rt.coverage.util.StringsPool;
+import com.intellij.rt.coverage.util.LinesUtil;
 import org.jetbrains.coverage.org.objectweb.asm.*;
 
-public class NewSamplingInstrumenter extends ClassVisitor {
+public class NewSamplingInstrumenter extends Instrumenter {
     private static final String LINE_HITS_FIELD_NAME = "__$lineHits$__";
     private boolean myVisitedStaticBlock;
 
-    private final ProjectData myProjectData;
-
-    private ClassData myClassData;
-    private LineData[] myLines;
-
-    private final String myClassName;
     private final String myClassNameType;
-
-    private final boolean myShouldCalculateSource;
-    private final int myMaxLineNumber;
-    private boolean myProcess;
-
-    private boolean myEnum;
+    private final ClassReader myReader;
 
     public NewSamplingInstrumenter(final ProjectData projectData,
                                    final ClassVisitor classVisitor,
                                    final ClassReader cr,
                                    final String className,
                                    final boolean shouldCalculateSource) {
-        super(Opcodes.API_VERSION, classVisitor);
-        myProjectData = projectData;
-        myClassName = className.replace('$', '.');
+        super(projectData, classVisitor, className, shouldCalculateSource);
         myClassNameType = className.replace(".", "/");
-        myShouldCalculateSource = shouldCalculateSource;
-        myMaxLineNumber = calcMaxLineNumber(cr);
-        myLines = new LineData[myMaxLineNumber + 1];
+        myReader = cr;
     }
 
-    private int calcMaxLineNumber(ClassReader cr) {
-        final int[] maxLine = new int[] {0};
-        final ClassVisitor instrumentedMethodCounter =  new ClassVisitor(Opcodes.API_VERSION) {
-            private boolean myEnum;
-            public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-                myEnum = (access & Opcodes.ACC_ENUM) != 0;
-                super.visit(version, access, name, signature, superName, interfaces);
-            }
-
-            public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-                if (!shouldProcessMethod(access, name, desc, signature, myEnum)) {
-                    return null;
-                }
-                return new MethodVisitor(Opcodes.API_VERSION) {
-                    public void visitLineNumber(int line, Label start) {
-                        if (maxLine[0] < line) {
-                            maxLine[0] = line;
-                        }
-                        super.visitLineNumber(line, start);
-                    }
-                };
-            }
-        };
-
-        cr.accept(instrumentedMethodCounter, 0);
-        return maxLine[0];
-    }
-
-    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-        myEnum = (access & Opcodes.ACC_ENUM) != 0;
-        myProcess = (access & Opcodes.ACC_INTERFACE) == 0;
-        myClassData = myProjectData.getOrCreateClassData(StringsPool.getFromPool(myClassName));
-        super.visit(version, access, name, signature, superName, interfaces);
-    }
-
-    public MethodVisitor visitMethod(final int access,
-                                     final String name,
-                                     final String desc,
-                                     final String signature,
-                                     final String[] exceptions) {
-        final MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
-
-        if (mv == null || !shouldProcessMethod(access, name, desc, signature, myEnum) || name.equals("<init>")) {  
-            return mv;
-        }
-        myProcess = true;
+    public MethodVisitor createMethodLineEnumerator(
+        final MethodVisitor mv,
+        final String name,
+        final String desc,
+        final int access,
+        final String signature,
+        final String[] exceptions
+    ) {
         final MethodVisitor visitor = new MethodVisitor(Opcodes.API_VERSION, mv) {
             public void visitLineNumber(final int line, final Label start) {
                 getOrCreateLineData(line, name, desc);
@@ -131,31 +77,6 @@ public class NewSamplingInstrumenter extends ClassVisitor {
         return visitor;
     }
 
-    protected void getOrCreateLineData(int line, String name, String desc) {
-        if (myLines == null) {
-            myLines = new LineData[myMaxLineNumber + 1];
-        }
-
-        if (myLines[line] == null) {
-            myLines[line] = new LineData(line, StringsPool.getFromPool(name + desc));
-        }
-    }
-
-
-    private boolean shouldProcessMethod(int access, String name, String desc, String signature, boolean isEnum) {
-        return (access & Opcodes.ACC_BRIDGE) == 0 &&  //try to skip bridge methods 
-                (access & Opcodes.ACC_ABSTRACT) == 0 && //skip abstracts; do not include interfaces without non-abstract methods in result
-                !(isEnum && isDefaultEnumMethod(name, desc, signature, myClassName));
-    }
-
-
-    private static boolean isDefaultEnumMethod(String name, String desc, String signature, String className) {
-        return name.equals("values") && desc.equals("()[L" + className + ";") ||
-                name.equals("valueOf") && desc.equals("(Ljava/lang/String;)L" + className + ";") ||
-                name.equals("<init>") && signature != null && signature.equals("()V");
-    }
-
-
     public void visitEnd() {
         if (myProcess) {
             visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL | Opcodes.ACC_STATIC | Opcodes.ACC_TRANSIENT, LINE_HITS_FIELD_NAME, "[I", null, null);
@@ -168,39 +89,26 @@ public class NewSamplingInstrumenter extends ClassVisitor {
                 mv.visitMaxs(2, 0);
                 mv.visitEnd();
             }
-
-            myClassData.setLines(myLines);
         }
-        myLines = null;
         super.visitEnd();
     }
 
-    public void visitSource(String source, String debug) {
-        super.visitSource(source, debug);
-        if (myShouldCalculateSource) {
-            myProjectData.getOrCreateClassData(myClassName).setSource(source);
-        }
-        if (debug != null) {
-            myProjectData.addLineMaps(myClassName, JSR45Util.extractLineMapping(debug, myClassName));
-        }
-    }
-
-    public void visitOuterClass(String outerClassName, String methodName, String methodSig) {
-        if (myShouldCalculateSource) {
-            myProjectData.getOrCreateClassData(outerClassName).setSource(myClassData.getSource());
-        }
-        super.visitOuterClass(outerClassName, methodName, methodSig);
+    @Override
+    protected void initLineData() {
+        final LineData[] lines = LinesUtil.calcLineArray(myMaxLineNumber, myLines);
+        myClassData.setLines(lines);
     }
 
     private class StaticBlockMethodVisitor extends MethodVisitor {
         public StaticBlockMethodVisitor(MethodVisitor mv) {
             super(Opcodes.API_VERSION, mv);
+            myMaxLineNumber = new LineCounter(NewSamplingInstrumenter.this).calcMaxLineNumber(myReader);
         }
 
         public void visitCode() {
             super.visitCode();
 
-            visitLdcInsn(myClassName);
+            visitLdcInsn(getClassName());
             pushInstruction(this, myMaxLineNumber + 1);
             visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_INT);
 

@@ -16,7 +16,6 @@
 
 package com.intellij.rt.coverage.instrumentation;
 
-import com.intellij.rt.coverage.data.LineData;
 import com.intellij.rt.coverage.data.ProjectData;
 import com.intellij.rt.coverage.util.LinesUtil;
 import org.jetbrains.coverage.org.objectweb.asm.ClassVisitor;
@@ -28,15 +27,11 @@ public class ClassInstrumenter extends Instrumenter {
   }
 
   protected MethodVisitor createMethodLineEnumerator(MethodVisitor mv, String name, String desc, int access, String signature,
-                                           String[] exceptions) {
+                                                     String[] exceptions) {
     return new LineEnumerator(this, mv, access, name, desc, signature, exceptions);
   }
 
   protected void initLineData() {
     myClassData.setLines(LinesUtil.calcLineArray(myMaxLineNumber, myLines));
-  }
-
-  public LineData getLineData(int line) {
-    return myLines.get(line);
   }
 }
