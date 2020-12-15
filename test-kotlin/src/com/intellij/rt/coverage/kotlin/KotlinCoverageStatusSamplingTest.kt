@@ -52,7 +52,6 @@ abstract class KotlinCoverageStatusAbstractSamplingTest : KotlinCoverageStatusTe
             fileName = "test2.kt")
 
     @Test
-    @Ignore("Not implemented")
     fun testReturn() = test("returnTest")
 
     @Test

@@ -19,6 +19,7 @@ package com.intellij.rt.coverage.instrumentation;
 import com.intellij.rt.coverage.data.ClassData;
 import com.intellij.rt.coverage.data.LineData;
 import com.intellij.rt.coverage.data.ProjectData;
+import com.intellij.rt.coverage.instrumentation.filters.FilterUtils;
 import com.intellij.rt.coverage.instrumentation.filters.visiting.MethodVisitingFilter;
 import com.intellij.rt.coverage.instrumentation.kotlin.KotlinUtils;
 import com.intellij.rt.coverage.util.StringsPool;
@@ -113,16 +114,12 @@ public abstract class Instrumenter extends MethodFilteringVisitor {
   }
 
   private MethodVisitor chainFilters(MethodVisitor root) {
-    for (MethodVisitingFilter filter : createVisitingFilters()) {
+    for (MethodVisitingFilter filter : FilterUtils.createVisitingFilters()) {
       if (filter.isApplicable(this)) {
         filter.initFilter(root, this);
         root = filter;
       }
     }
     return root;
-  }
-
-  private static List<MethodVisitingFilter> createVisitingFilters() {
-    return KotlinUtils.createVisitingFilters();
   }
 }
