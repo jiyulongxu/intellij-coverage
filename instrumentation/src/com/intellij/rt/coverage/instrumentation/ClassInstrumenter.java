@@ -22,6 +22,7 @@ import com.intellij.rt.coverage.instrumentation.filters.enumerating.NotNullAsser
 import com.intellij.rt.coverage.util.LinesUtil;
 import org.jetbrains.coverage.org.objectweb.asm.ClassVisitor;
 import org.jetbrains.coverage.org.objectweb.asm.MethodVisitor;
+import org.jetbrains.coverage.org.objectweb.asm.Opcodes;
 
 import java.util.Collections;
 import java.util.List;
@@ -31,21 +32,38 @@ public class ClassInstrumenter extends Instrumenter {
     super(projectData, classVisitor, className, shouldCalculateSource);
   }
 
-  protected MethodVisitor createMethodLineEnumerator(MethodVisitor mv, String name, String desc, int access, String signature,
-                                                     String[] exceptions) {
-    LineEnumerator enumerator = new LineEnumerator(this, mv, access, name, desc, signature, exceptions);
-    return chainFilters(enumerator, enumerator, access, name, desc, signature, exceptions);
+  protected MethodVisitor createMethodLineEnumerator(final MethodVisitor methodVisitor,
+                                                     final String name,
+                                                     final String desc,
+                                                     final int access,
+                                                     final String signature,
+                                                     final String[] exceptions) {
+    final BranchDataContainer branchData = new BranchDataContainer(this);
+    final LineEnumerator enumerator = new LineEnumerator(this, branchData, access, name, desc, signature, exceptions);
+    final MethodVisitor visitor = createEnumeratingVisitor(this, enumerator, access, name, desc, signature, exceptions);
+    return new MethodVisitor(Opcodes.API_VERSION, visitor) {
+      @Override
+      public void visitEnd() {
+        super.visitEnd();
+        MethodVisitor visitor = !enumerator.hasExecutableLines()
+            ? methodVisitor
+            : new TouchCounter(methodVisitor, branchData, getClassName(), access, desc);
+        enumerator.getMethodNode().accept(visitor);
+      }
+    };
   }
 
   protected void initLineData() {
     myClassData.setLines(LinesUtil.calcLineArray(myMaxLineNumber, myLines));
   }
 
-  private MethodVisitor chainFilters(LineEnumerator context, MethodVisitor root, int access, String name,
-                                     String desc, String signature, String[] exceptions) {
+
+  private static MethodVisitor createEnumeratingVisitor(Instrumenter context, LineEnumerator enumerator, int access,
+                                                        String name, String desc, String signature, String[] exceptions) {
+    MethodVisitor root = enumerator;
     for (LineEnumeratorFilter filter : createFilters()) {
-      if (filter.isApplicable(this, access, name, desc, signature, exceptions)) {
-        filter.initFilter(root, context);
+      if (filter.isApplicable(context, access, name, desc, signature, exceptions)) {
+        filter.initFilter(root, enumerator);
         root = filter;
       }
     }

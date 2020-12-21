@@ -25,14 +25,20 @@ import org.jetbrains.coverage.org.objectweb.asm.Type;
 public class TouchCounter extends MethodVisitor implements Opcodes {
   private final int myVariablesCount;
 
-  private final LineEnumerator myEnumerator;
+  private final BranchDataContainer myBranchData;
+  private final String myClassName;
 
   private Label myStartLabel;
   private Label myEndLabel;
 
-  public TouchCounter(final LineEnumerator enumerator, int access, String desc) {
-    super(Opcodes.API_VERSION, enumerator.getWV());
-    myEnumerator = enumerator;
+  public TouchCounter(final MethodVisitor methodVisitor,
+                      final BranchDataContainer branchDataContainer,
+                      final String className,
+                      int access,
+                      String desc) {
+    super(Opcodes.API_VERSION, methodVisitor);
+    myBranchData = branchDataContainer;
+    myClassName = className;
     int variablesCount = ((Opcodes.ACC_STATIC & access) != 0) ? 0 : 1;
     final Type[] args = Type.getArgumentTypes(desc);
     for (Type arg : args) {
@@ -59,7 +65,7 @@ public class TouchCounter extends MethodVisitor implements Opcodes {
 
     visitPossibleJump(label);
 
-    final LineEnumerator.Switch aSwitch = myEnumerator.getSwitch(label);
+    final BranchDataContainer.Switch aSwitch = myBranchData.getSwitch(label);
     if (aSwitch != null) {
       mv.visitVarInsn(Opcodes.ALOAD, getCurrentClassDataNumber());
       pushIntValue(aSwitch.getLine());
@@ -78,14 +84,14 @@ public class TouchCounter extends MethodVisitor implements Opcodes {
   }
 
   private void visitPossibleJump(Label label) {
-    final LineEnumerator.Jump jump = myEnumerator.getJump(label);
+    final BranchDataContainer.Jump jump = myBranchData.getJump(label);
     if (jump != null) {
       touchBranch(jump.getType(), jump.getIndex(), jump.getLine());
     }
   }
 
   public void visitCode() {
-    mv.visitLdcInsn(myEnumerator.getClassName());
+    mv.visitLdcInsn(myClassName);
     mv.visitMethodInsn(Opcodes.INVOKESTATIC, ProjectData.PROJECT_DATA_OWNER, "loadClassData", "(Ljava/lang/String;)Ljava/lang/Object;", false);
     mv.visitVarInsn(Opcodes.ASTORE, getCurrentClassDataNumber());
 
