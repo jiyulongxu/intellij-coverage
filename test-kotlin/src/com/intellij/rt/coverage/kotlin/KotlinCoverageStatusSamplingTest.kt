@@ -105,3 +105,7 @@ abstract class KotlinCoverageStatusAbstractSamplingTest : KotlinCoverageStatusTe
 class KotlinCoverageStatusSamplingTest : KotlinCoverageStatusAbstractSamplingTest() {
     override val coverage = Coverage.SAMPLING
 }
+
+class KotlinCoverageStatusNewSamplingTest : KotlinCoverageStatusAbstractSamplingTest() {
+    override val coverage = Coverage.NEW_SAMPLING
+}

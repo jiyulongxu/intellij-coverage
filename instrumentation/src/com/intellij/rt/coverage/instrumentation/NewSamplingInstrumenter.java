@@ -23,10 +23,12 @@ import org.jetbrains.coverage.org.objectweb.asm.*;
 
 public class NewSamplingInstrumenter extends Instrumenter {
     private static final String LINE_HITS_FIELD_NAME = "__$lineHits$__";
-    private boolean myVisitedStaticBlock;
+    private static final String LINE_HITS_FIELD_TYPE = "[I";
+    private static final String LINE_HITS_FIELD_INIT_NAME = "__$lineHitsInit$__";
 
     private final String myClassNameType;
     private final ClassReader myReader;
+    private final ArrayInstrumenter myArrayInstrumenter;
 
     public NewSamplingInstrumenter(final ProjectData projectData,
                                    final ClassVisitor classVisitor,
@@ -34,6 +36,7 @@ public class NewSamplingInstrumenter extends Instrumenter {
                                    final String className,
                                    final boolean shouldCalculateSource) {
         super(projectData, classVisitor, className, shouldCalculateSource);
+        myArrayInstrumenter = new ArraySamplingInstrumenter(cr, className);
         myClassNameType = className.replace(".", "/");
         myReader = cr;
     }
@@ -51,11 +54,11 @@ public class NewSamplingInstrumenter extends Instrumenter {
                 getOrCreateLineData(line, name, desc);
 
                 //prepare for store: load array and index
-                visitFieldInsn(Opcodes.GETSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, "[I");
+                visitFieldInsn(Opcodes.GETSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
                 pushInstruction(mv, line);
 
                 //load array
-                visitFieldInsn(Opcodes.GETSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, "[I");
+                visitFieldInsn(Opcodes.GETSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
                 //index
                 pushInstruction(mv, line);
                 //load array[index]
@@ -70,26 +73,12 @@ public class NewSamplingInstrumenter extends Instrumenter {
                 super.visitLineNumber(line, start);
             }
         };
-        if ("<clinit>".equals(name)) {
-            myVisitedStaticBlock = true;
-            return new StaticBlockMethodVisitor(visitor);
-        }
-        return visitor;
+        return myArrayInstrumenter.createMethodVisitor(this, mv, visitor, name);
     }
 
+    @Override
     public void visitEnd() {
-        if (myProcess) {
-            visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL | Opcodes.ACC_STATIC | Opcodes.ACC_TRANSIENT, LINE_HITS_FIELD_NAME, "[I", null, null);
-
-            if (!myVisitedStaticBlock) {
-                MethodVisitor mv = super.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
-                mv = new StaticBlockMethodVisitor(mv);
-                mv.visitCode();
-                mv.visitInsn(Opcodes.RETURN);
-                mv.visitMaxs(2, 0);
-                mv.visitEnd();
-            }
-        }
+        myArrayInstrumenter.generateMembers(this);
         super.visitEnd();
     }
 
@@ -99,28 +88,23 @@ public class NewSamplingInstrumenter extends Instrumenter {
         myClassData.setLines(lines);
     }
 
-    private class StaticBlockMethodVisitor extends MethodVisitor {
-        public StaticBlockMethodVisitor(MethodVisitor mv) {
-            super(Opcodes.API_VERSION, mv);
-            myMaxLineNumber = new LineCounter(NewSamplingInstrumenter.this).calcMaxLineNumber(myReader);
+    private class ArraySamplingInstrumenter extends ArrayInstrumenter {
+
+        public ArraySamplingInstrumenter(ClassReader cr, String className) {
+            super(cr, null, className, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE, LINE_HITS_FIELD_INIT_NAME, true);
         }
 
-        public void visitCode() {
-            super.visitCode();
-
-            visitLdcInsn(getClassName());
-            pushInstruction(this, myMaxLineNumber + 1);
-            visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_INT);
+        public void initArray(MethodVisitor mv) {
+            myMaxLineNumber = new LineCounter(NewSamplingInstrumenter.this).calcMaxLineNumber(myReader);
+            mv.visitLdcInsn(getClassName());
+            pushInstruction(mv, myMaxLineNumber + 1);
+            mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_INT);
 
             //register line array
-            visitMethodInsn(Opcodes.INVOKESTATIC, ProjectData.PROJECT_DATA_OWNER, "touchClassLines", "(Ljava/lang/String;[I)[I", false);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC, ProjectData.PROJECT_DATA_OWNER, "touchClassLines", "(Ljava/lang/String;[I)[I", false);
 
             //ensure same line array loaded in different class loaders
-            visitFieldInsn(Opcodes.PUTSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, "[I");
-        }
-
-        public void visitMaxs(int maxStack, int maxLocals) {
-            super.visitMaxs(Math.max(2, maxStack), maxLocals);
+            mv.visitFieldInsn(Opcodes.PUTSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
         }
     }
 
