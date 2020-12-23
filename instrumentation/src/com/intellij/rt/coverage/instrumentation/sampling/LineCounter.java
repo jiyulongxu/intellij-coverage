@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.intellij.rt.coverage.instrumentation;
+package com.intellij.rt.coverage.instrumentation.sampling;
 
+import com.intellij.rt.coverage.instrumentation.MethodFilteringVisitor;
 import org.jetbrains.coverage.org.objectweb.asm.*;
 
 public class LineCounter {

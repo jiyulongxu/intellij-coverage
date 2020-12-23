@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package com.intellij.rt.coverage.instrumentation;
+package com.intellij.rt.coverage.instrumentation.tracing.data;
 
+import com.intellij.rt.coverage.data.JumpData;
 import com.intellij.rt.coverage.data.LineData;
+import com.intellij.rt.coverage.data.SwitchData;
+import com.intellij.rt.coverage.instrumentation.Instrumenter;
 import org.jetbrains.coverage.org.objectweb.asm.Label;
 
 import java.util.HashMap;
@@ -30,8 +33,14 @@ public class BranchDataContainer {
   private Map<Label, Jump> myJumps;
   private Map<Label, Switch> mySwitches;
 
+  private int mySize;
+
   public BranchDataContainer(Instrumenter context) {
     myContext = context;
+  }
+
+  public int getSize() {
+    return mySize;
   }
 
   public void startNewMethod() {
@@ -39,9 +48,9 @@ public class BranchDataContainer {
     myLastTrueJump = null;
   }
 
-  public void addJump(int id, int line, Label trueLabel, Label falseLabel) {
-    Jump trueJump = new Jump(id, line, true);
-    Jump falseJump = new Jump(id, line, false);
+  public void addJump(int id, int line, Label trueLabel, Label falseLabel, JumpData data) {
+    Jump trueJump = new Jump(id, line, true, data);
+    Jump falseJump = new Jump(id, line, false, data);
 
     myLastTrueJump = trueLabel;
     myLastFalseJump = falseLabel;
@@ -51,11 +60,11 @@ public class BranchDataContainer {
     myJumps.put(myLastTrueJump, trueJump);
   }
 
-  public void addSwitch(int id, int line, Label dflt, Label[] labels) {
+  public void addSwitch(int index, int line, Label dflt, Label[] labels, SwitchData data) {
     if (mySwitches == null) mySwitches = new HashMap<Label, Switch>();
-    mySwitches.put(dflt, new Switch(id, line, -1));
+    mySwitches.put(dflt, new Switch(index, line, -1, data));
     for (int i = labels.length - 1; i >= 0; i--) {
-      mySwitches.put(labels[i], new Switch(id, line, i));
+      mySwitches.put(labels[i], new Switch(index, line, i, data));
     }
   }
 
@@ -73,6 +82,12 @@ public class BranchDataContainer {
     myLastFalseJump = null;
   }
 
+  public void removeSwitch(Label label) {
+    if (mySwitches != null) {
+      mySwitches.remove(label);
+    }
+  }
+
   public Jump getJump(Label jump) {
     if (myJumps == null) return null;
     return myJumps.get(jump);
@@ -83,94 +98,25 @@ public class BranchDataContainer {
     return mySwitches.get(label);
   }
 
-
-  static class Jump {
-    private final int myIndex;
-    private final int myLine;
-    private final boolean myType;
-
-    public Jump(int index, int line, boolean type) {
-      myIndex = index;
-      myLine = line;
-      myType = type;
+  public void enumerateCoverageObjects() {
+    int id = 0;
+    int maxLine = myContext.getMaxLineNumber();
+    for (int line = 0; line <= maxLine; line++) {
+      LineData data = myContext.getLineData(line);
+      if (data == null) continue;
+      data.setId(id++);
     }
-
-    public int getIndex() {
-      return myIndex;
+    if (myJumps != null) {
+      for (Jump jump : myJumps.values()) {
+        jump.setId(id++);
+      }
     }
-
-    public int getLine() {
-      return myLine;
+    if (mySwitches != null) {
+      for (Switch aSwitch : mySwitches.values()) {
+        aSwitch.setId(id++);
+      }
     }
-
-    public boolean getType() {
-      return myType;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-
-      Jump jump = (Jump) o;
-
-      return myIndex == jump.myIndex
-          && myLine == jump.myLine
-          && myType == jump.myType;
-    }
-
-    @Override
-    public int hashCode() {
-      int result = myIndex;
-      result = 31 * result + myLine;
-      result = 31 * result + (myType ? 1 : 0);
-      return result;
-    }
-  }
-
-
-  static class Switch {
-    private final int myIndex;
-    private final int myLine;
-    private final int myKey;
-
-    public Switch(int index, int line, int key) {
-      myIndex = index;
-      myLine = line;
-      myKey = key;
-    }
-
-    public int getIndex() {
-      return myIndex;
-    }
-
-    public int getLine() {
-      return myLine;
-    }
-
-    public int getKey() {
-      return myKey;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-
-      Switch aSwitch = (Switch) o;
-
-      return myIndex == aSwitch.myIndex
-          && myLine == aSwitch.myLine
-          && myKey == aSwitch.myKey;
-    }
-
-    @Override
-    public int hashCode() {
-      int result = myIndex;
-      result = 31 * result + myLine;
-      result = 31 * result + myKey;
-      return result;
-    }
+    mySize = id;
   }
 
 }

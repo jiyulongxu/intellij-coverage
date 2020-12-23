@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-package com.intellij.rt.coverage.instrumentation;
+package com.intellij.rt.coverage.instrumentation.tracing;
 
+import com.intellij.rt.coverage.data.JumpData;
 import com.intellij.rt.coverage.data.LineData;
 import com.intellij.rt.coverage.data.SwitchData;
+import com.intellij.rt.coverage.instrumentation.Instrumenter;
 import com.intellij.rt.coverage.instrumentation.filters.FilterUtils;
 import com.intellij.rt.coverage.instrumentation.filters.enumerating.LineEnumeratorFilter;
+import com.intellij.rt.coverage.instrumentation.tracing.data.BranchDataContainer;
 import org.jetbrains.coverage.org.objectweb.asm.Label;
 import org.jetbrains.coverage.org.objectweb.asm.MethodVisitor;
 import org.jetbrains.coverage.org.objectweb.asm.Opcodes;
@@ -29,7 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class LineEnumerator extends MethodVisitor implements Opcodes {
-  private final ClassInstrumenter myClassInstrumenter;
+  private final Instrumenter myInstrumenter;
   private final String myMethodName;
   private final String myDescriptor;
   private final MethodNode myMethodNode;
@@ -41,7 +44,7 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
   private final BranchDataContainer myBranchData;
   private final HashMap<Label, SwitchData> mySwitchLabels = new HashMap<Label, SwitchData>();
 
-  public LineEnumerator(ClassInstrumenter classInstrumenter,
+  public LineEnumerator(Instrumenter instrumenter,
                         BranchDataContainer branchDataContainer,
                         final int access,
                         final String name,
@@ -54,14 +57,14 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
 
     MethodVisitor root = myMethodNode;
     for (LineEnumeratorFilter filter : FilterUtils.createLineEnumeratorFilters()) {
-      if (filter.isApplicable(classInstrumenter, access, name, desc, signature, exceptions)) {
+      if (filter.isApplicable(instrumenter, access, name, desc, signature, exceptions)) {
         filter.initFilter(root, this);
         root = filter;
       }
     }
     super.mv = root;
 
-    myClassInstrumenter = classInstrumenter;
+    myInstrumenter = instrumenter;
     myBranchData = branchDataContainer;
     myMethodName = name;
     myDescriptor = desc;
@@ -72,7 +75,7 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
     myCurrentLine = line;
     myCurrentSwitch = 0;
     myHasExecutableLines = true;
-    myClassInstrumenter.getOrCreateLineData(myCurrentLine, myMethodName, myDescriptor);
+    myInstrumenter.getOrCreateLineData(myCurrentLine, myMethodName, myDescriptor);
   }
 
   public void visitJumpInsn(final int opcode, final Label label) {
@@ -82,14 +85,14 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
     }
     boolean jumpInstrumented = false;
     if (opcode != Opcodes.GOTO && opcode != Opcodes.JSR && !myMethodName.equals("<clinit>")) {
-      final LineData lineData = myClassInstrumenter.getLineData(myCurrentLine);
+      final LineData lineData = myInstrumenter.getLineData(myCurrentLine);
       if (lineData != null) {
         int currentJump = lineData.jumpsCount();
         Label trueLabel = new Label();
         Label falseLabel = new Label();
-        myBranchData.addJump(currentJump, myCurrentLine, trueLabel, falseLabel);
 
-        lineData.addJump(currentJump);
+        JumpData jump = lineData.addJump(currentJump);
+        myBranchData.addJump(currentJump, myCurrentLine, trueLabel, falseLabel, jump);
 
         jumpInstrumented = true;
         super.visitJumpInsn(opcode, trueLabel);
@@ -108,20 +111,22 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
   public void visitLookupSwitchInsn(Label dflt, int[] keys, Label[] labels) {
     super.visitLookupSwitchInsn(dflt, keys, labels);
     if (!myHasExecutableLines) return;
-    final LineData lineData = myClassInstrumenter.getLineData(myCurrentLine);
+    final LineData lineData = myInstrumenter.getLineData(myCurrentLine);
     if (lineData != null) {
-      myBranchData.addSwitch(myCurrentSwitch, myCurrentLine, dflt, labels);
-      lineData.addSwitch(myCurrentSwitch++, keys);
+      int index = myCurrentSwitch;
+      SwitchData data = lineData.addSwitch(myCurrentSwitch++, keys);
+      myBranchData.addSwitch(index, myCurrentLine, dflt, labels, data);
     }
   }
 
   public void visitTableSwitchInsn(int min, int max, Label dflt, Label[] labels) {
     super.visitTableSwitchInsn(min, max, dflt, labels);
     if (!myHasExecutableLines) return;
-    final LineData lineData = myClassInstrumenter.getLineData(myCurrentLine);
+    final LineData lineData = myInstrumenter.getLineData(myCurrentLine);
     if (lineData != null) {
-      myBranchData.addSwitch(myCurrentSwitch, myCurrentLine, dflt, labels);
+      int index = myCurrentSwitch;
       SwitchData switchData = lineData.addSwitch(myCurrentSwitch++, min, max);
+      myBranchData.addSwitch(index, myCurrentLine, dflt, labels, switchData);
       mySwitchLabels.put(dflt, switchData);
     }
   }
@@ -131,7 +136,7 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
   }
 
   public String getClassName() {
-    return myClassInstrumenter.getClassName();
+    return myInstrumenter.getClassName();
   }
 
   public String getMethodName() {

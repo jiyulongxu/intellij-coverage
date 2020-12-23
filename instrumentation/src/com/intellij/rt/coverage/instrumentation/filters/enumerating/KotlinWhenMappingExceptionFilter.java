@@ -44,6 +44,7 @@ public class KotlinWhenMappingExceptionFilter extends LineEnumeratorFilter {
       SwitchData switchData = myContext.getSwitchLabels().get(myCurrentLabel);
       if (switchData != null) {
         switchData.touch(-1);
+        myContext.getBranchData().removeSwitch(myCurrentLabel);
       }
     }
   }

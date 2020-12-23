@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package com.intellij.rt.coverage.instrumentation;
+package com.intellij.rt.coverage.instrumentation.sampling;
 
 import com.intellij.rt.coverage.data.LineData;
 import com.intellij.rt.coverage.data.ProjectData;
+import com.intellij.rt.coverage.instrumentation.InstrumentationUtils;
+import com.intellij.rt.coverage.instrumentation.Instrumenter;
 import com.intellij.rt.coverage.util.LinesUtil;
 import org.jetbrains.coverage.org.objectweb.asm.*;
 
@@ -55,12 +57,7 @@ public class SamplingInstrumenter extends Instrumenter {
       public void visitLineNumber(final int line, final Label start) {
         getOrCreateLineData(line, name, desc);
         mv.visitVarInsn(Opcodes.ALOAD, getCurrentClassDataNumber());
-        if (line <= Short.MAX_VALUE) {
-          mv.visitIntInsn(Opcodes.SIPUSH, line);
-        }
-        else {
-          mv.visitLdcInsn(line);
-        }
+        InstrumentationUtils.pushInt(mv, line);
         mv.visitMethodInsn(Opcodes.INVOKESTATIC, ProjectData.PROJECT_DATA_OWNER, "touchLine", "(" + OBJECT_TYPE + "I)V", false);
         super.visitLineNumber(line, start);
       }

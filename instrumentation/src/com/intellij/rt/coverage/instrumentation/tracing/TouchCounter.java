@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
-package com.intellij.rt.coverage.instrumentation;
+package com.intellij.rt.coverage.instrumentation.tracing;
 
 import com.intellij.rt.coverage.data.ProjectData;
+import com.intellij.rt.coverage.instrumentation.InstrumentationUtils;
+import com.intellij.rt.coverage.instrumentation.tracing.data.BranchDataContainer;
+import com.intellij.rt.coverage.instrumentation.tracing.data.Jump;
+import com.intellij.rt.coverage.instrumentation.tracing.data.Switch;
 import org.jetbrains.coverage.org.objectweb.asm.Label;
 import org.jetbrains.coverage.org.objectweb.asm.MethodVisitor;
 import org.jetbrains.coverage.org.objectweb.asm.Opcodes;
@@ -50,7 +54,7 @@ public class TouchCounter extends MethodVisitor implements Opcodes {
 
   public void visitLineNumber(int line, Label start) {
     mv.visitVarInsn(Opcodes.ALOAD, getCurrentClassDataNumber());
-    pushIntValue(line);
+    InstrumentationUtils.pushInt(mv, line);
     mv.visitMethodInsn(Opcodes.INVOKESTATIC, ProjectData.PROJECT_DATA_OWNER, "trace", "(Ljava/lang/Object;I)V", false);
     super.visitLineNumber(line, start);
   }
@@ -65,11 +69,11 @@ public class TouchCounter extends MethodVisitor implements Opcodes {
 
     visitPossibleJump(label);
 
-    final BranchDataContainer.Switch aSwitch = myBranchData.getSwitch(label);
+    final Switch aSwitch = myBranchData.getSwitch(label);
     if (aSwitch != null) {
       mv.visitVarInsn(Opcodes.ALOAD, getCurrentClassDataNumber());
-      pushIntValue(aSwitch.getLine());
-      pushIntValue(aSwitch.getIndex());
+      InstrumentationUtils.pushInt(mv, aSwitch.getLine());
+      InstrumentationUtils.pushInt(mv, aSwitch.getIndex());
       mv.visitIntInsn(Opcodes.SIPUSH, aSwitch.getKey());
       mv.visitMethodInsn(Opcodes.INVOKESTATIC, ProjectData.PROJECT_DATA_OWNER, "touchSwitch", "(Ljava/lang/Object;III)V", false);
     }
@@ -77,14 +81,14 @@ public class TouchCounter extends MethodVisitor implements Opcodes {
 
   private void touchBranch(final boolean trueHit, final int jumpIndex, int line) {
     mv.visitVarInsn(Opcodes.ALOAD, getCurrentClassDataNumber());
-    pushIntValue(line);
-    pushIntValue(jumpIndex);
+    InstrumentationUtils.pushInt(mv, line);
+    InstrumentationUtils.pushInt(mv, jumpIndex);
     mv.visitInsn(trueHit ? Opcodes.ICONST_0 : Opcodes.ICONST_1);
     mv.visitMethodInsn(Opcodes.INVOKESTATIC, ProjectData.PROJECT_DATA_OWNER, "touchJump", "(Ljava/lang/Object;IIZ)V", false);
   }
 
   private void visitPossibleJump(Label label) {
-    final BranchDataContainer.Jump jump = myBranchData.getJump(label);
+    final Jump jump = myBranchData.getJump(label);
     if (jump != null) {
       touchBranch(jump.getType(), jump.getIndex(), jump.getLine());
     }
@@ -96,14 +100,6 @@ public class TouchCounter extends MethodVisitor implements Opcodes {
     mv.visitVarInsn(Opcodes.ASTORE, getCurrentClassDataNumber());
 
     super.visitCode();
-  }
-
-  private void pushIntValue(int value) {
-    if (value <= Short.MAX_VALUE) {
-      mv.visitIntInsn(Opcodes.SIPUSH, value);
-    } else {
-      mv.visitLdcInsn(value);
-    }
   }
 
   public void visitVarInsn(int opcode, int var) {

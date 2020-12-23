@@ -21,14 +21,11 @@ import com.intellij.rt.coverage.data.LineData;
 import com.intellij.rt.coverage.data.ProjectData;
 import com.intellij.rt.coverage.instrumentation.filters.FilterUtils;
 import com.intellij.rt.coverage.instrumentation.filters.visiting.MethodVisitingFilter;
-import com.intellij.rt.coverage.instrumentation.kotlin.KotlinUtils;
 import com.intellij.rt.coverage.util.StringsPool;
 import org.jetbrains.coverage.gnu.trove.TIntObjectHashMap;
 import org.jetbrains.coverage.org.objectweb.asm.ClassVisitor;
 import org.jetbrains.coverage.org.objectweb.asm.MethodVisitor;
 import org.jetbrains.coverage.org.objectweb.asm.Opcodes;
-
-import java.util.List;
 
 public abstract class Instrumenter extends MethodFilteringVisitor {
   protected final ProjectData myProjectData;
@@ -77,7 +74,7 @@ public abstract class Instrumenter extends MethodFilteringVisitor {
 
   protected abstract void initLineData();
 
-  protected void getOrCreateLineData(int line, String name, String desc) {
+  public LineData getOrCreateLineData(int line, String name, String desc) {
     //create lines again if class was loaded again by another class loader; may be myLinesArray should be cleared
     if (myLines == null) myLines = new TIntObjectHashMap<LineData>();
     LineData lineData = myLines.get(line);
@@ -86,6 +83,7 @@ public abstract class Instrumenter extends MethodFilteringVisitor {
       myLines.put(line, lineData);
     }
     if (line > myMaxLineNumber) myMaxLineNumber = line;
+    return lineData;
   }
 
   public void visitSource(String source, String debug) {
@@ -107,6 +105,10 @@ public abstract class Instrumenter extends MethodFilteringVisitor {
 
   public LineData getLineData(int line) {
     return myLines.get(line);
+  }
+
+  public int getMaxLineNumber() {
+    return myMaxLineNumber;
   }
 
   public void removeLine(final int line) {

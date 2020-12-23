@@ -204,4 +204,28 @@ public abstract class ArrayInstrumenter extends ClassVisitor {
   protected String getFieldClassName() {
     return myInternalClassName;
   }
+
+  /**
+   * Util method for int array instrumentation.
+   * @param index array index to increment data at
+   */
+  public void incrementByIndex(MethodVisitor mv, int index) {
+    //prepare for store: load array and index
+    mv.visitFieldInsn(Opcodes.GETSTATIC, myInternalClassName, myArrayFieldName, myArrayFieldType);
+    InstrumentationUtils.pushInt(mv, index);
+
+    //load array
+    mv.visitFieldInsn(Opcodes.GETSTATIC, myInternalClassName, myArrayFieldName, myArrayFieldType);
+    //index
+    InstrumentationUtils.pushInt(mv, index);
+    //load array[index]
+    mv.visitInsn(Opcodes.IALOAD);
+
+    //increment
+    mv.visitInsn(Opcodes.ICONST_1);
+    mv.visitInsn(Opcodes.IADD);
+
+    //stack: array, index, incremented value: store value in array[index]
+    mv.visitInsn(Opcodes.IASTORE);
+  }
 }

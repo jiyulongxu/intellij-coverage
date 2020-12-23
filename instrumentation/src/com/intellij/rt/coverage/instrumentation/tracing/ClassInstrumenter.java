@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
-package com.intellij.rt.coverage.instrumentation;
+package com.intellij.rt.coverage.instrumentation.tracing;
 
 import com.intellij.rt.coverage.data.ProjectData;
-import com.intellij.rt.coverage.instrumentation.filters.enumerating.LineEnumeratorFilter;
-import com.intellij.rt.coverage.instrumentation.filters.enumerating.NotNullAssertionsFilter;
+import com.intellij.rt.coverage.instrumentation.Instrumenter;
+import com.intellij.rt.coverage.instrumentation.tracing.data.BranchDataContainer;
 import com.intellij.rt.coverage.util.LinesUtil;
 import org.jetbrains.coverage.org.objectweb.asm.ClassVisitor;
 import org.jetbrains.coverage.org.objectweb.asm.MethodVisitor;
 import org.jetbrains.coverage.org.objectweb.asm.Opcodes;
-
-import java.util.Collections;
-import java.util.List;
 
 public class ClassInstrumenter extends Instrumenter {
   public ClassInstrumenter(final ProjectData projectData, ClassVisitor classVisitor, String className, boolean shouldCalculateSource) {
@@ -40,7 +37,7 @@ public class ClassInstrumenter extends Instrumenter {
                                                      final String[] exceptions) {
     final BranchDataContainer branchData = new BranchDataContainer(this);
     final LineEnumerator enumerator = new LineEnumerator(this, branchData, access, name, desc, signature, exceptions);
-    final MethodVisitor visitor = createEnumeratingVisitor(this, enumerator, access, name, desc, signature, exceptions);
+    final MethodVisitor visitor = EnumeratingUtils.createEnumeratingVisitor(this, enumerator, access, name, desc, signature, exceptions);
     return new MethodVisitor(Opcodes.API_VERSION, visitor) {
       @Override
       public void visitEnd() {
@@ -55,23 +52,5 @@ public class ClassInstrumenter extends Instrumenter {
 
   protected void initLineData() {
     myClassData.setLines(LinesUtil.calcLineArray(myMaxLineNumber, myLines));
-  }
-
-
-  private static MethodVisitor createEnumeratingVisitor(Instrumenter context, LineEnumerator enumerator, int access,
-                                                        String name, String desc, String signature, String[] exceptions) {
-    MethodVisitor root = enumerator;
-    for (LineEnumeratorFilter filter : createFilters()) {
-      if (filter.isApplicable(context, access, name, desc, signature, exceptions)) {
-        filter.initFilter(root, enumerator);
-        root = filter;
-      }
-    }
-    return root;
-  }
-
-  private static List<LineEnumeratorFilter> createFilters() {
-    LineEnumeratorFilter notNullFilter = new NotNullAssertionsFilter();
-    return Collections.singletonList(notNullFilter);
   }
 }

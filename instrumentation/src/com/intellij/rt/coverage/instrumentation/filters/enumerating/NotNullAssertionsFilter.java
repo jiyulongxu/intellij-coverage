@@ -17,7 +17,7 @@
 package com.intellij.rt.coverage.instrumentation.filters.enumerating;
 
 import com.intellij.rt.coverage.instrumentation.Instrumenter;
-import com.intellij.rt.coverage.instrumentation.LineEnumerator;
+import com.intellij.rt.coverage.instrumentation.tracing.LineEnumerator;
 import com.intellij.rt.coverage.util.ClassNameUtil;
 import org.jetbrains.coverage.org.objectweb.asm.Label;
 import org.jetbrains.coverage.org.objectweb.asm.MethodVisitor;

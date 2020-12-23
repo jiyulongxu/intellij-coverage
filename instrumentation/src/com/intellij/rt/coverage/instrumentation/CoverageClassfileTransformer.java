@@ -17,6 +17,10 @@
 package com.intellij.rt.coverage.instrumentation;
 
 import com.intellij.rt.coverage.data.ProjectData;
+import com.intellij.rt.coverage.instrumentation.sampling.NewSamplingInstrumenter;
+import com.intellij.rt.coverage.instrumentation.sampling.SamplingInstrumenter;
+import com.intellij.rt.coverage.instrumentation.tracing.ClassInstrumenter;
+import com.intellij.rt.coverage.instrumentation.tracing.NewTracingInstrumenter;
 import com.intellij.rt.coverage.util.ClassNameUtil;
 import com.intellij.rt.coverage.util.classFinder.ClassFinder;
 import org.jetbrains.coverage.org.objectweb.asm.ClassReader;
@@ -51,6 +55,9 @@ public class CoverageClassfileTransformer extends AbstractIntellijClassfileTrans
         return new SamplingInstrumenter(data, cw, className, shouldCalculateSource);
       }
     } else {
+      if (System.getProperty("idea.new.sampling.coverage") != null) {
+        return new NewTracingInstrumenter(data, cw, cr, className, shouldCalculateSource);
+      }
       return new ClassInstrumenter(data, cw, className, shouldCalculateSource);
     }
   }

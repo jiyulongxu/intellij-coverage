@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
-package com.intellij.rt.coverage.instrumentation;
+package com.intellij.rt.coverage.instrumentation.sampling;
 
 import com.intellij.rt.coverage.data.LineData;
 import com.intellij.rt.coverage.data.ProjectData;
+import com.intellij.rt.coverage.instrumentation.ArrayInstrumenter;
+import com.intellij.rt.coverage.instrumentation.InstrumentationUtils;
+import com.intellij.rt.coverage.instrumentation.Instrumenter;
 import com.intellij.rt.coverage.util.LinesUtil;
 import org.jetbrains.coverage.org.objectweb.asm.*;
 
@@ -52,24 +55,7 @@ public class NewSamplingInstrumenter extends Instrumenter {
         final MethodVisitor visitor = new MethodVisitor(Opcodes.API_VERSION, mv) {
             public void visitLineNumber(final int line, final Label start) {
                 getOrCreateLineData(line, name, desc);
-
-                //prepare for store: load array and index
-                visitFieldInsn(Opcodes.GETSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
-                pushInstruction(mv, line);
-
-                //load array
-                visitFieldInsn(Opcodes.GETSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
-                //index
-                pushInstruction(mv, line);
-                //load array[index]
-                visitInsn(Opcodes.IALOAD);
-
-                //increment
-                visitInsn(Opcodes.ICONST_1);
-                visitInsn(Opcodes.IADD);
-
-                //stack: array, index, incremented value: store value in array[index]
-                visitInsn(Opcodes.IASTORE);
+                myArrayInstrumenter.incrementByIndex(mv, line);
                 super.visitLineNumber(line, start);
             }
         };
@@ -97,7 +83,7 @@ public class NewSamplingInstrumenter extends Instrumenter {
         public void initArray(MethodVisitor mv) {
             myMaxLineNumber = new LineCounter(NewSamplingInstrumenter.this).calcMaxLineNumber(myReader);
             mv.visitLdcInsn(getClassName());
-            pushInstruction(mv, myMaxLineNumber + 1);
+            InstrumentationUtils.pushInt(mv, myMaxLineNumber + 1);
             mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_INT);
 
             //register line array
@@ -105,15 +91,6 @@ public class NewSamplingInstrumenter extends Instrumenter {
 
             //ensure same line array loaded in different class loaders
             mv.visitFieldInsn(Opcodes.PUTSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
-        }
-    }
-
-    private static void pushInstruction(MethodVisitor mv, int operand) {
-        if (operand <= Short.MAX_VALUE) {
-            mv.visitIntInsn(Opcodes.SIPUSH, operand);
-        }
-        else {
-            mv.visitLdcInsn(operand);
         }
     }
 }

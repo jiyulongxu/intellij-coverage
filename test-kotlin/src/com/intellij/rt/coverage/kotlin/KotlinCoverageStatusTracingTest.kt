@@ -23,9 +23,7 @@ import com.intellij.rt.coverage.runWithCoverage
 import org.junit.Test
 
 
-class KotlinCoverageStatusTracingTest : KotlinCoverageStatusTest() {
-    override val coverage = Coverage.TRACING
-
+abstract class KotlinCoverageStatusAbstractTracingTest : KotlinCoverageStatusTest() {
     @Test
     fun testSimpleIfElse() = test("simple.ifelse")
 
@@ -52,4 +50,12 @@ class KotlinCoverageStatusTracingTest : KotlinCoverageStatusTest() {
         val project = runWithCoverage(myDataFile, "fixes.IDEA_57695", coverage)
         assertEqualsLines(project, hashMapOf(1 to "PARTIAL", 2 to "FULL"), listOf("kotlinTestData.fixes.IDEA_57695.TestClass"))
     }
+}
+
+class KotlinCoverageStatusTracingTest : KotlinCoverageStatusAbstractTracingTest() {
+    override val coverage = Coverage.TRACING
+}
+
+class KotlinCoverageStatusNewTracingTest : KotlinCoverageStatusAbstractTracingTest() {
+    override val coverage = Coverage.NEW_TRACING
 }

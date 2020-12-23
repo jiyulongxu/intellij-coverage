@@ -64,6 +64,7 @@ public class SaveHook implements Runnable {
             DataOutputStream os = null;
             try {
                 os = CoverageIOUtil.openFile(myDataFile);
+                projectData.applyBranchData();
                 projectData.checkLineMappings();
                 final TObjectIntHashMap<String> dict = new TObjectIntHashMap<String>();
                 final Map<String, ClassData> classes = new HashMap<String, ClassData>(projectData.getClasses());

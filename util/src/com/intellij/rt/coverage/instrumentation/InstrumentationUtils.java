@@ -14,25 +14,17 @@
  * limitations under the License.
  */
 
-package com.intellij.rt.coverage.instrumentation.filters.enumerating;
+package com.intellij.rt.coverage.instrumentation;
 
-import com.intellij.rt.coverage.instrumentation.Instrumenter;
-import com.intellij.rt.coverage.instrumentation.tracing.LineEnumerator;
 import org.jetbrains.coverage.org.objectweb.asm.MethodVisitor;
 import org.jetbrains.coverage.org.objectweb.asm.Opcodes;
 
-public abstract class LineEnumeratorFilter extends MethodVisitor {
-  protected LineEnumerator myContext;
-
-  public LineEnumeratorFilter() {
-    super(Opcodes.API_VERSION);
-  }
-
-  public abstract boolean isApplicable(Instrumenter context, int access, String name,
-                                       String desc, String signature, String[] exceptions);
-
-  public void initFilter(MethodVisitor mv, LineEnumerator context) {
-    this.mv = mv;
-    myContext = context;
+public class InstrumentationUtils {
+  public static void pushInt(MethodVisitor mv, int value) {
+    if (value <= Short.MAX_VALUE) {
+      mv.visitIntInsn(Opcodes.SIPUSH, value);
+    } else {
+      mv.visitLdcInsn(value);
+    }
   }
 }

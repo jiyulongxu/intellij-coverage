@@ -24,13 +24,17 @@ import java.io.File
 import java.nio.file.Paths
 
 enum class Coverage {
-    SAMPLING, NEW_SAMPLING, TRACING
+    SAMPLING, NEW_SAMPLING, TRACING, NEW_TRACING
 }
 
 fun runWithCoverage(coverageDataFile: File, testName: String, coverage: Coverage, calcUnloaded: Boolean = false): ProjectData {
     val classPath = System.getProperty("java.class.path")
-    val extraArgs = if (coverage == Coverage.NEW_SAMPLING) arrayOf("-Didea.new.sampling.coverage=true") else emptyArray()
-    val sampling = coverage != Coverage.TRACING
+    val extraArgs = when (coverage) {
+        Coverage.NEW_SAMPLING -> arrayOf("-Didea.new.sampling.coverage=true")
+        Coverage.NEW_TRACING -> arrayOf("-Didea.new.sampling.coverage=true")
+        else -> emptyArray()
+    }
+    val sampling = coverage == Coverage.SAMPLING || coverage == Coverage.NEW_SAMPLING
     return CoverageStatusTest.runCoverage(classPath, coverageDataFile, "kotlinTestData.*", "kotlinTestData.$testName.Test", sampling, extraArgs, calcUnloaded)
 }
 

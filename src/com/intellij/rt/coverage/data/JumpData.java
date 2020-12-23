@@ -25,6 +25,9 @@ public class JumpData implements CoverageData {
   private int myTrueHits;
   private int myFalseHits;
 
+  private int myTrueId;
+  private int myFalseId;
+
   public void touchTrueHit() {
     myTrueHits++;
   }
@@ -58,5 +61,17 @@ public class JumpData implements CoverageData {
 
   public void setFalseHits(final int falseHits) {
     myFalseHits = falseHits;
+  }
+
+  public int getId(boolean type) {
+    return type ? myTrueId : myFalseId;
+  }
+
+  public void setId(int id, boolean type) {
+    if (type) {
+      myTrueId = id;
+    } else {
+      myFalseId = id;
+    }
   }
 }
