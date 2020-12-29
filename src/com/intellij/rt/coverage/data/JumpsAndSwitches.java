@@ -27,11 +27,16 @@ import java.util.List;
  * @author Pavel.Sher
  */
 public class JumpsAndSwitches implements CoverageData {
+  private final int myLineNumber;
   private List<JumpData> myJumps;
   private JumpData[] myJumpsArray;
 
   private List<SwitchData> mySwitches;
   private SwitchData[] mySwitchesArray;
+
+  public JumpsAndSwitches(int lineNumber) {
+    myLineNumber = lineNumber;
+  }
 
   public JumpData[] getJumps() {
     return myJumpsArray;
@@ -45,7 +50,7 @@ public class JumpsAndSwitches implements CoverageData {
     if (myJumps == null) myJumps = new ArrayList<JumpData>();
     if (myJumps.size() <= jump) {
       for (int i = myJumps.size(); i <= jump; i++){
-        myJumps.add(new JumpData());
+        myJumps.add(new JumpData(myLineNumber));
       }
     }
     return myJumps.get(jump);
@@ -57,10 +62,10 @@ public class JumpsAndSwitches implements CoverageData {
 
   public SwitchData addSwitch(final int switchNumber, final int[] keys) {
     if (mySwitches == null) mySwitches = new ArrayList<SwitchData>();
-    final SwitchData switchData = new SwitchData(keys);
+    final SwitchData switchData = new SwitchData(keys, myLineNumber);
     if (mySwitches.size() <= switchNumber) {
       for(int i = mySwitches.size(); i < switchNumber; i++) {
-        mySwitches.add(new SwitchData(new int[0]));
+        mySwitches.add(new SwitchData(new int[0], myLineNumber));
       }
       if (mySwitches.size() == switchNumber) {
         mySwitches.add(switchData);
@@ -124,7 +129,7 @@ public class JumpsAndSwitches implements CoverageData {
           myJumpsArray = extJumpsArray;
         }
       }
-      mergeJumps(myJumpsArray, jumpsData.myJumpsArray);
+      mergeJumps(myJumpsArray, jumpsData.myJumpsArray, myLineNumber);
     }
     if (jumpsData.mySwitchesArray != null) {
       if (mySwitchesArray == null) {
@@ -137,28 +142,28 @@ public class JumpsAndSwitches implements CoverageData {
           mySwitchesArray = extJumpsArray;
         }
       }
-      mergeSwitches(mySwitchesArray, jumpsData.mySwitchesArray);
+      mergeSwitches(mySwitchesArray, jumpsData.mySwitchesArray, myLineNumber);
     }
   }
 
-  private static void mergeSwitches(SwitchData[] myArray, SwitchData[] array) {
+  private static void mergeSwitches(SwitchData[] myArray, SwitchData[] array, int lineNumber) {
     for (int i = 0; i < array.length; i++) {
       SwitchData switchData = myArray[i];
       if (switchData == null) {
         if (array[i] == null) continue;
-        switchData = new SwitchData(array[i].getKeys());
+        switchData = new SwitchData(array[i].getKeys(), lineNumber);
         myArray[i] = switchData;
       }
       switchData.merge(array[i]);
     }
   }
 
-  private static void mergeJumps(JumpData[] myArray, JumpData[] array) {
+  private static void mergeJumps(JumpData[] myArray, JumpData[] array, int lineNumber) {
     for (int i = 0; i < array.length; i++) {
       JumpData switchData = myArray[i];
       if (switchData == null) {
         if (array[i] == null) continue;
-        switchData = new JumpData();
+        switchData = new JumpData(lineNumber);
         myArray[i] = switchData;
       }
       switchData.merge(array[i]);

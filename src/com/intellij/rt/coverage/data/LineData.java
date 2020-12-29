@@ -49,7 +49,7 @@ public class LineData implements CoverageData {
 
   JumpsAndSwitches getOrCreateJumpsAndSwitches() {
     if (myJumpsAndSwitches == null) {
-      myJumpsAndSwitches = new JumpsAndSwitches();
+      myJumpsAndSwitches = new JumpsAndSwitches(myLineNumber);
     }
     return myJumpsAndSwitches;
   }
@@ -102,7 +102,7 @@ public class LineData implements CoverageData {
       if (myJumpsAndSwitches != null) {
         getOrCreateJumpsAndSwitches().save(os);
       } else {
-        new JumpsAndSwitches().save(os);
+        new JumpsAndSwitches(myLineNumber).save(os);
       }
     }
   }

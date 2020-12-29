@@ -27,11 +27,13 @@ enum class Coverage {
     SAMPLING, NEW_SAMPLING, TRACING
 }
 
-fun runWithCoverage(coverageDataFile: File, testName: String, coverage: Coverage, calcUnloaded: Boolean = false): ProjectData {
+fun runWithCoverage(coverageDataFile: File, testName: String, coverage: Coverage, calcUnloaded: Boolean = false,
+                    patterns: String = "kotlinTestData.*"
+): ProjectData {
     val classPath = System.getProperty("java.class.path")
     val extraArgs = if (coverage == Coverage.NEW_SAMPLING) arrayOf("-Didea.new.sampling.coverage=true") else emptyArray()
     val sampling = coverage != Coverage.TRACING
-    return CoverageStatusTest.runCoverage(classPath, coverageDataFile, "kotlinTestData.*", "kotlinTestData.$testName.Test", sampling, extraArgs, calcUnloaded)
+    return CoverageStatusTest.runCoverage(classPath, coverageDataFile, patterns, "kotlinTestData.$testName.Test", sampling, extraArgs, calcUnloaded)
 }
 
 internal fun assertEqualsLines(project: ProjectData, expectedLines: Map<Int, String>, classNames: List<String>) {

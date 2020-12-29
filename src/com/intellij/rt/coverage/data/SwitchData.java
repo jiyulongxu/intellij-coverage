@@ -24,13 +24,14 @@ import java.util.Arrays;
 
 public class SwitchData implements CoverageData {
   private int[] myKeys;
+  private final int myLineNumber;
 
   private int myDefaultHits;
   private int[] myHits;
 
-  public SwitchData(final int[] keys) {
-
+  public SwitchData(final int[] keys, final int lineNumber) {
     myKeys = keys;
+    myLineNumber = lineNumber;
 
     myHits = new int[keys.length];
 
@@ -88,5 +89,9 @@ public class SwitchData implements CoverageData {
 
   public int[] getKeys() {
     return myKeys;
+  }
+
+  public int getLineNumber() {
+    return myLineNumber;
   }
 }

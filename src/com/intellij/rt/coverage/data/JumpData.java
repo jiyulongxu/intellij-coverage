@@ -24,6 +24,11 @@ import java.io.IOException;
 public class JumpData implements CoverageData {
   private int myTrueHits;
   private int myFalseHits;
+  private final int myLineNumber;
+
+  public JumpData(int lineNumber) {
+    myLineNumber = lineNumber;
+  }
 
   public void touchTrueHit() {
     myTrueHits++;
@@ -58,5 +63,9 @@ public class JumpData implements CoverageData {
 
   public void setFalseHits(final int falseHits) {
     myFalseHits = falseHits;
+  }
+
+  public int getLineNumber() {
+    return myLineNumber;
   }
 }
