@@ -38,6 +38,7 @@ ext {
 configurations {
   baseline
   head
+  jacoco
 }
 
 // benchmark without agent
@@ -53,6 +54,16 @@ task baselineBenchmark(type: JavaExec) {
 // benchmark with current version of agent
 task headBenchmark(type: JavaExec, dependsOn: jar) {
   configureBenchmark it as JavaExec, configurations.head
+}
+
+// benchmark with current version of agent, new instrumentation
+task newInstrumentationBenchmark(type: JavaExec, dependsOn: jar) {
+  configureBenchmark it as JavaExec, configurations.head
+}
+
+// benchmark jacoco agent
+task jacocoBenchmark(type: JavaExec) {
+  configureBenchmark it as JavaExec, configurations.jacoco
 }
 
 def configureBenchmark(JavaExec benchmark, Configuration agent = null) {

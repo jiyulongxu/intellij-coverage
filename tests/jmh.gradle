@@ -29,8 +29,23 @@ ext {
 dependencies {
   baseline "$agentsGroupId:$coverage_jar_name:$baselineVersion"
   head project(path: ':instrumentation', configuration: 'archives')
+  jacoco "org.jacoco:org.jacoco.agent:0.8.6:runtime"
 }
 
 headBenchmark {
   dependsOn(":instrumentation:coverageAgentJar")
+}
+
+newInstrumentationBenchmark {
+  dependsOn(":instrumentation:coverageAgentJar")
+  doFirst {
+    benchmarkExtraArgs = ['-jvmArgs', "-Didea.new.sampling.coverage=true"]
+  }
+}
+
+jacocoBenchmark {
+  doFirst {
+    benchmarkAgentName = "org.jacoco.agent"
+    benchmarkExtraAgentArgs = "=destfile=coverage.exec,includes=org.joda*:org.apache.commons*"
+  }
 }
