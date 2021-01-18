@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2020 JetBrains s.r.o.
+ * Copyright 2000-2021 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,21 @@
  * limitations under the License.
  */
 
-package kotlinTestData.newInstrumentation
+package kotlinTestData.newInstrumentation.apache
 
-import junit.textui.TestRunner
-import org.joda.time.TestAllPackages
-import java.io.OutputStream
+import com.intellij.rt.coverage.jmh.ApacheCollectionsTests
+import kotlinTestData.newInstrumentation.NullStream
 import java.io.PrintStream
-import java.util.*
 
 object Test {
     @JvmStatic
     fun main(args: Array<String>) {
         val original = System.out
         try {
-            System.setOut(PrintStream(object : OutputStream() {
-                override fun write(b: Int) {
-                }
-            }))
-            TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"))
-            Locale.setDefault(Locale("th", "TH"))
-
-            object : TestRunner() {}.start(arrayOf(TestAllPackages::class.java.name))
+            System.setOut(PrintStream(NullStream()))
+            ApacheCollectionsTests.runTests()
         } finally {
             System.setOut(original)
         }
-
     }
 }

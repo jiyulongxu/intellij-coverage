@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2020 JetBrains s.r.o.
+ * Copyright 2000-2021 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,11 @@
  * limitations under the License.
  */
 
-package com.intellij.rt.coverage.util.diff;
+package kotlinTestData.newInstrumentation
 
-public class AddDiffElement<T> extends DiffElement<T> {
-  private final T myElement;
+import java.io.OutputStream
 
-  public AddDiffElement(String className, T addElement) {
-    super(className);
-    myElement = addElement;
-  }
-
-  public T getDiff() {
-    return myElement;
-  }
-
-  @Override
-  public String toString() {
-    return "AddDiffElement<" + myElement.getClass().getSimpleName() + ">{" + getClassName() + '}';
-  }
+class NullStream : OutputStream() {
+    override fun write(b: Int) {
+    }
 }

@@ -16,8 +16,13 @@
 
 package com.intellij.rt.coverage
 
+import com.intellij.rt.coverage.data.ClassData
+import com.intellij.rt.coverage.data.JumpData
+import com.intellij.rt.coverage.data.LineData
+import com.intellij.rt.coverage.data.SwitchData
 import com.intellij.rt.coverage.util.ProjectDataLoader
 import com.intellij.rt.coverage.util.diff.CoverageDiff
+import com.intellij.rt.coverage.util.diff.DiffElement
 import org.junit.Assert
 import org.junit.Test
 import java.io.File
@@ -25,18 +30,24 @@ import java.io.File
 class NewInstrumentationTest {
 
     @Test
-    fun testNewSamplingCoverage() {
-        assertJodaTimeEqualCoverage(Coverage.SAMPLING, Coverage.NEW_SAMPLING)
-    }
+    fun testNewSamplingCoverageJoda() = assertEqualCoverage(Coverage.SAMPLING, Coverage.NEW_SAMPLING, "newInstrumentation.joda", "org\\.joda\\.time.*")
 
-    private fun assertJodaTimeEqualCoverage(before: Coverage, after: Coverage) {
+    @Test
+    fun testNewSamplingCoverageApache() = assertEqualCoverage(Coverage.SAMPLING, Coverage.NEW_SAMPLING, "newInstrumentation.apache",
+            patterns = "org\\.apache\\.commons.*"
+                    + " -exclude" // excluded classes have fluky coverage
+                    + " org\\.apache\\.commons\\.collections4\\.map\\.ReferenceMapTest"
+                    + " org\\.apache\\.commons\\.collections4\\.map\\.AbstractReferenceMap")
+
+    private fun assertEqualCoverage(before: Coverage, after: Coverage, testName: String, patterns: String) {
         val (fileA, fileB) = List(2) { createTempFile("test") }.onEach { it.deleteOnExit() }
-        val patterns = "org\\.joda\\.time.*"
-        val testName = "newInstrumentation"
         val projectA = runWithCoverage(fileA, testName, before, patterns = patterns)
         val projectB = runWithCoverage(fileB, testName, after, patterns = patterns)
         val diff = CoverageDiff.coverageDiff(projectA, projectB)
-        Assert.assertTrue(diff.isEmpty)
+        Assert.assertEquals(emptyList<DiffElement<ClassData>>(), diff.classesDiff)
+        Assert.assertEquals(emptyList<DiffElement<LineData>>(), diff.linesDiff)
+        Assert.assertEquals(emptyList<DiffElement<JumpData>>(), diff.jumpsDiff)
+        Assert.assertEquals(emptyList<DiffElement<SwitchData>>(), diff.switchesDiff)
     }
 
     private fun assertEqualCoverage(fileA: File, fileB: File) {

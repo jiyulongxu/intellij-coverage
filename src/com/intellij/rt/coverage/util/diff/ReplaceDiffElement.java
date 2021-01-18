@@ -34,4 +34,8 @@ public class ReplaceDiffElement<T> extends DiffElement<T> {
     return myAfterElement;
   }
 
+  @Override
+  public String toString() {
+    return "ReplaceDiffElement<" + myBeforeElement.getClass().getSimpleName() + ">{" + getClassName() + '}';
+  }
 }

@@ -28,4 +28,8 @@ public class DeleteDiffElement<T> extends DiffElement<T> {
     return myElement;
   }
 
+  @Override
+  public String toString() {
+    return "DeleteDiffElement<" + myElement.getClass().getSimpleName() + ">{" + getClassName() + '}';
+  }
 }
