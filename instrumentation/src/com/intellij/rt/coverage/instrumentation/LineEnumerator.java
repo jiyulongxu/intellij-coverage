@@ -34,7 +34,6 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
   private final MethodNode myMethodNode;
 
   private int myCurrentLine;
-  private int myCurrentSwitch;
 
   private Label myLastFalseJump;
   private Label myLastTrueJump;
@@ -92,7 +91,6 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
     super.visitLineNumber(line, start);
     myHasInstructions = false;
     myCurrentLine = line;
-    myCurrentSwitch = 0;
     myHasExecutableLines = true;
     myClassInstrumenter.getOrCreateLineData(myCurrentLine, myMethodName, mySignature);
   }
@@ -168,8 +166,9 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
     if (!myHasExecutableLines) return;
     final LineData lineData = myClassInstrumenter.getLineData(myCurrentLine);
     if (lineData != null) {
-      rememberSwitchLabels(dflt, labels);
-      lineData.addSwitch(myCurrentSwitch++, keys);
+      int switchIndex = lineData.switchesCount();
+      rememberSwitchLabels(dflt, labels, switchIndex);
+      lineData.addSwitch(switchIndex, keys);
     }
     myState = SEEN_NOTHING;
     myHasInstructions = true;
@@ -180,19 +179,20 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
     if (!myHasExecutableLines) return;
     final LineData lineData = myClassInstrumenter.getLineData(myCurrentLine);
     if (lineData != null) {
-      rememberSwitchLabels(dflt, labels);
-      SwitchData switchData = lineData.addSwitch(myCurrentSwitch++, min, max);
+      int switchIndex = lineData.switchesCount();
+      rememberSwitchLabels(dflt, labels, switchIndex);
+      SwitchData switchData = lineData.addSwitch(switchIndex, min, max);
       mySwitchLabels.put(dflt, switchData);
     }
     myState = SEEN_NOTHING;
     myHasInstructions = true;
   }
 
-  private void rememberSwitchLabels(final Label dflt, final Label[] labels) {
+  private void rememberSwitchLabels(final Label dflt, final Label[] labels, int switchIndex) {
     if (mySwitches == null) mySwitches = new HashMap<Label, Switch>();
-    mySwitches.put(dflt, new Switch(myCurrentSwitch, myCurrentLine, -1));
+    mySwitches.put(dflt, new Switch(switchIndex, myCurrentLine, -1));
     for (int i = labels.length - 1; i >= 0; i--) {
-      mySwitches.put(labels[i], new Switch(myCurrentSwitch, myCurrentLine, i));
+      mySwitches.put(labels[i], new Switch(switchIndex, myCurrentLine, i));
     }
   }
 
@@ -291,15 +291,18 @@ public class LineEnumerator extends MethodVisitor implements Opcodes {
 
   public void removeLastSwitch(Label dflt, Label... labels) {
     mySwitchLabels.remove(dflt);
+    boolean firstRemove = false;
     if (mySwitches != null) {
-      mySwitches.remove(dflt);
+      Switch s = mySwitches.remove(dflt);
+      firstRemove = s != null;
       for (Label label : labels) {
         mySwitches.remove(label);
       }
     }
     final LineData lineData = myClassInstrumenter.getLineData(myCurrentLine);
-    if (lineData != null) {
-      lineData.removeSwitch(--myCurrentSwitch);
+    if (lineData != null && firstRemove) {
+      int switchIndex = lineData.switchesCount() - 1;
+      lineData.removeSwitch(switchIndex);
     }
   }
 
