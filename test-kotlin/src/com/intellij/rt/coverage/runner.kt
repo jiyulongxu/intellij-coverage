@@ -27,11 +27,13 @@ enum class Coverage {
     SAMPLING, NEW_SAMPLING, TRACING
 }
 
+private const val TEST_PACKAGE = "kotlinTestData"
+
 fun runWithCoverage(coverageDataFile: File, testName: String, coverage: Coverage, calcUnloaded: Boolean = false): ProjectData {
     val classPath = System.getProperty("java.class.path")
     val extraArgs = if (coverage == Coverage.NEW_SAMPLING) arrayOf("-Didea.new.sampling.coverage=true") else emptyArray()
     val sampling = coverage != Coverage.TRACING
-    return CoverageStatusTest.runCoverage(classPath, coverageDataFile, "kotlinTestData.*", "kotlinTestData.$testName.Test", sampling, extraArgs, calcUnloaded)
+    return CoverageStatusTest.runCoverage(classPath, coverageDataFile, "$TEST_PACKAGE.*", "kotlinTestData.$testName.Test", sampling, extraArgs, calcUnloaded)
 }
 
 internal fun assertEqualsLines(project: ProjectData, expectedLines: Map<Int, String>, classNames: List<String>) {
@@ -45,7 +47,7 @@ internal const val all = "ALL CLASSES"
 private fun coverageLines(project: ProjectData, classNames: List<String>): Map<Int, String> {
     val allData = ClassData("")
     if (classNames.contains(all)) {
-        project.classes.values.forEach { allData.merge(it) }
+        project.classes.values.filter { it.name.startsWith(TEST_PACKAGE) }.forEach { allData.merge(it) }
     } else {
         classNames
                 .map { project.getClassData(it) }
@@ -54,6 +56,8 @@ private fun coverageLines(project: ProjectData, classNames: List<String>): Map<I
     val lines = allData.getLinesData().associateBy({ it.lineNumber }, { it.status.toByte() })
     return statusToString(lines)
 }
+
+internal fun getLineHits(data: ClassData, line: Int) = data.getLinesData().single { it.lineNumber == line }.hits
 
 private fun logCoverageDiff(expectedLines: Map<Int, String>, actualCoverage: Map<Int, String>) {
     val expected = expectedLines.toList()

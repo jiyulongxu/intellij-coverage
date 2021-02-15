@@ -61,7 +61,19 @@ public abstract class Instrumenter extends MethodFilteringVisitor {
     if (mv == null) return null;
     if (!shouldInstrumentMethod(access, name, desc, signature, exceptions)) return mv;
     myProcess = true;
-    return chainFilters(createMethodLineEnumerator(mv, name, desc, access, signature, exceptions));
+    return chainFilters(mv, access, name, desc, signature, exceptions);
+  }
+
+  private MethodVisitor chainFilters(MethodVisitor root, int access, String name,
+                                     String desc, String signature, String[] exceptions) {
+    root = createMethodLineEnumerator(root, name, desc, access, signature, exceptions);
+    for (MethodVisitingFilter filter : createVisitingFilters()) {
+      if (filter.isApplicable(this, access, name, desc, signature, exceptions)) {
+        filter.initFilter(root, this, desc);
+        root = filter;
+      }
+    }
+    return root;
   }
 
   protected abstract MethodVisitor createMethodLineEnumerator(MethodVisitor mv, String name, String desc, int access, String signature, String[] exceptions);
@@ -104,22 +116,30 @@ public abstract class Instrumenter extends MethodFilteringVisitor {
     super.visitOuterClass(outerClassName, methodName, methodSig);
   }
 
+  @Override
+  public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+    myAnnotations.add(StringsPool.getFromPool(descriptor));
+    return super.visitAnnotation(descriptor, visible);
+  }
+
+  public boolean isSampling() {
+    return myProjectData.isSampling();
+  }
+
+  public boolean hasInterfaces() {
+    return myHasInterfaces;
+  }
+
+  public List<String> getAnnotations() {
+    return myAnnotations;
+  }
+
   public LineData getLineData(int line) {
     return myLines.get(line);
   }
 
   public void removeLine(final int line) {
     myLines.remove(line);
-  }
-
-  private MethodVisitor chainFilters(MethodVisitor root) {
-    for (MethodVisitingFilter filter : createVisitingFilters()) {
-      if (filter.isApplicable(this)) {
-        filter.initFilter(root, this);
-        root = filter;
-      }
-    }
-    return root;
   }
 
   private static List<MethodVisitingFilter> createVisitingFilters() {
