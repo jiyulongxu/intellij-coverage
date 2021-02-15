@@ -19,7 +19,6 @@ package com.intellij.rt.coverage.instrumentation.filters.signature;
 import com.intellij.rt.coverage.instrumentation.MethodFilteringVisitor;
 
 public class EnumMethodsFilter implements MethodSignatureFilter {
-  @Override
   public boolean shouldFilter(int access, String name, String desc, String signature, String[] exceptions, MethodFilteringVisitor context) {
     return context.isEnum() && isDefaultEnumMethod(name, desc, signature, context.getClassName());
   }

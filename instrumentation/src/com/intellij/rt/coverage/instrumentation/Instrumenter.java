@@ -116,22 +116,8 @@ public abstract class Instrumenter extends MethodFilteringVisitor {
     super.visitOuterClass(outerClassName, methodName, methodSig);
   }
 
-  @Override
-  public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-    myAnnotations.add(StringsPool.getFromPool(descriptor));
-    return super.visitAnnotation(descriptor, visible);
-  }
-
   public boolean isSampling() {
     return myProjectData.isSampling();
-  }
-
-  public boolean hasInterfaces() {
-    return myHasInterfaces;
-  }
-
-  public List<String> getAnnotations() {
-    return myAnnotations;
   }
 
   public LineData getLineData(int line) {
