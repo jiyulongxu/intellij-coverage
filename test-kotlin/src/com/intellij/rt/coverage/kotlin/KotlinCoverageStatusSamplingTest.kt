@@ -17,10 +17,7 @@
 package com.intellij.rt.coverage.kotlin
 
 
-import com.intellij.rt.coverage.Coverage
-import com.intellij.rt.coverage.assertEqualsLines
-import com.intellij.rt.coverage.getLineHits
-import com.intellij.rt.coverage.runWithCoverage
+import com.intellij.rt.coverage.*
 import kotlinTestData.threadSafe.data.THREAD_SAFE_DATA_EXPECTED_HITS
 import kotlinTestData.threadSafe.structure.THREAD_SAFE_STRUCTURE_CLASSES
 import org.junit.Assert
@@ -39,6 +36,12 @@ abstract class KotlinCoverageStatusAbstractSamplingTest : KotlinCoverageStatusTe
     fun testDefaultArgsSeveralArgs() = test("defaultArgs.severalArguments")
 
     @Test
+    fun testUnloadedSingleFile() = test("unloaded.singleFile", "UnusedClass", calcUnloaded = true)
+
+    @Test
+    fun testUnloadedMultiFile() = test("unloaded.multiFile", "UnusedClass", calcUnloaded = true, fileName = "UnusedClass.kt")
+
+    @Test
     fun testSimpleInline() = test("inline.simple")
 
     @Test
@@ -54,8 +57,16 @@ abstract class KotlinCoverageStatusAbstractSamplingTest : KotlinCoverageStatusTe
     fun testReified() = test("inline.reified")
 
     @Test
-    fun testMultiplyFilesInline() = test("inline.multiplyFiles", "Test2Kt",
-            fileName = "test2.kt")
+    fun testInlineCoroutines() = test("inline.coroutines.sampling", all)
+
+    @Test
+    fun testNoInline() = test("inline.noinline", all)
+
+    @Test
+    fun testCrossInline() = test("inline.crossinline", all)
+
+    @Test
+    fun testMultiplyFilesInline() = test("inline.multiplyFiles", "Test2Kt", fileName = "test2.kt")
 
     @Test
     @Ignore("Not implemented")
@@ -81,9 +92,14 @@ abstract class KotlinCoverageStatusAbstractSamplingTest : KotlinCoverageStatusTe
     fun testDefaultInterfaceMemberRemoveOnlyInterfaceMember() = test("defaultInterfaceMember.removeOnlyDefaultInterfaceMember", "Bar")
 
     @Test
-    fun testDefaultInterfaceMemberJava() = test("defaultInterfaceMember.java",
-            "Foo", "Bar",
-            fileName = "Test.java")
+    fun test_IDEA_259731() = test("fixes.IDEA_259731", "C")
+
+    @Test
+    fun testDefaultInterfaceMemberJava() = test("defaultInterfaceMember.java", "Foo", "Bar", fileName = "Test.java")
+
+    @Test
+    @Ignore("To be fixed")
+    fun testCoroutinesFix1() = test("coroutines.fix1.sampling", all)
 
     @Test
     fun testImplementationByDelegation() = test("implementationByDelegation", "Derived")
@@ -92,17 +108,11 @@ abstract class KotlinCoverageStatusAbstractSamplingTest : KotlinCoverageStatusTe
     fun testImplementationByDelegationGeneric() = test("implementationByDelegationGeneric", "BDelegation")
 
     @Test
-    fun testWhenMappingsSampling() = test("whenMapping.sampling")
+    fun testWhenMappings() = test("whenMapping.sampling")
 
     @Test
     fun testSealedClassConstructor() = test("sealedClassConstructor",
             "SealedClass", "SealedClassWithArgs", "ClassWithPrivateDefaultConstructor")
-
-    @Test
-    fun testUnloadedSingleFile() = test("unloaded.singleFile", "UnusedClass", calcUnloaded = true)
-
-    @Test
-    fun testUnloadedMultiFile() = test("unloaded.multiFile", "UnusedClass", calcUnloaded = true, fileName = "UnusedClass.kt")
 
     @Test
     fun testFunInterface() = test("funInterface", "TestKt", "TestKt\$test\$1")
