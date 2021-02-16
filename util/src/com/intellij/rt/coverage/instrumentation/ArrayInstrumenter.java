@@ -98,7 +98,7 @@ public abstract class ArrayInstrumenter extends ClassVisitor {
         newMv = new MethodVisitor(Opcodes.API_VERSION, newMv) {
           @Override
           public void visitCode() {
-            cv.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL | Opcodes.ACC_SYNTHETIC, myArrayFieldName, myArrayFieldType, null, null);
+            cv.visitField(INTERFACE_FIELD_ACCESS, myArrayFieldName, myArrayFieldType, null, null);
             initArray(mv);
             mySeenClinit = true;
             super.visitCode();

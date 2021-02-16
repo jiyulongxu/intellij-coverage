@@ -57,10 +57,7 @@ public class NewSamplingInstrumenter extends Instrumenter {
                 visitFieldInsn(Opcodes.GETSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
                 pushInstruction(mv, line);
 
-                //load array
-                visitFieldInsn(Opcodes.GETSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
-                //index
-                pushInstruction(mv, line);
+                mv.visitInsn(Opcodes.DUP2);
                 //load array[index]
                 visitInsn(Opcodes.IALOAD);
 

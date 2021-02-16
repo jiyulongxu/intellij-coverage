@@ -100,6 +100,9 @@ abstract class KotlinCoverageStatusAbstractSamplingTest : KotlinCoverageStatusTe
 
     @Test
     fun testFunInterface() = test("funInterface", "TestKt", "TestKt\$test\$1")
+
+    @Test
+    fun testBadCycleClasses() = test("badCycle.classes", "JavaTest\$BaseClass", "JavaTest\$DerivedClass", fileName = "JavaTest.java")
 }
 
 class KotlinCoverageStatusSamplingTest : KotlinCoverageStatusAbstractSamplingTest() {
