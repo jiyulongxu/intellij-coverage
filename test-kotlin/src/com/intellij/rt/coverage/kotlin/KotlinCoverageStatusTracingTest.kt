@@ -52,4 +52,7 @@ class KotlinCoverageStatusTracingTest : KotlinCoverageStatusTest() {
         val project = runWithCoverage(myDataFile, "fixes.IDEA_57695", coverage)
         assertEqualsLines(project, hashMapOf(1 to "PARTIAL", 2 to "FULL"), listOf("kotlinTestData.fixes.IDEA_57695.TestClass"))
     }
+
+    @Test
+    fun test_IDEA_259332() = test("fixes.IDEA_259332", "SwitchWithFallthrough", fileName = "SwitchWithFallthrough.java")
 }

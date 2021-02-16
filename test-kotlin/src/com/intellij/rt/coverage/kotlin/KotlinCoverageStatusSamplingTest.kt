@@ -18,6 +18,12 @@ package com.intellij.rt.coverage.kotlin
 
 
 import com.intellij.rt.coverage.Coverage
+import com.intellij.rt.coverage.assertEqualsLines
+import com.intellij.rt.coverage.getLineHits
+import com.intellij.rt.coverage.runWithCoverage
+import kotlinTestData.threadSafe.data.THREAD_SAFE_DATA_EXPECTED_HITS
+import kotlinTestData.threadSafe.structure.THREAD_SAFE_STRUCTURE_CLASSES
+import org.junit.Assert
 import org.junit.Ignore
 import org.junit.Test
 
@@ -100,6 +106,22 @@ abstract class KotlinCoverageStatusAbstractSamplingTest : KotlinCoverageStatusTe
 
     @Test
     fun testFunInterface() = test("funInterface", "TestKt", "TestKt\$test\$1")
+
+    @Test
+    fun testThreadSafeStructure() {
+        val n = THREAD_SAFE_STRUCTURE_CLASSES
+        val expected = (1..n).associateWith { "FULL" }
+        val project = runWithCoverage(myDataFile, "threadSafe.structure", coverage)
+        assertEqualsLines(project, expected, (0 until n).map { "kotlinTestData.threadSafe.structure.Class$it" })
+    }
+
+    @Test
+    @Ignore("Coverage hit increment is not atomic.")
+    fun testThreadSafeData() {
+        val project = runWithCoverage(myDataFile, "threadSafe.data", coverage)
+        val data = project.getClassData("kotlinTestData.threadSafe.data.SimpleClass")
+        Assert.assertEquals(THREAD_SAFE_DATA_EXPECTED_HITS, getLineHits(data, 24))
+    }
 
     @Test
     fun testBadCycleClasses() = test("badCycle.classes", "JavaTest\$BaseClass", "JavaTest\$DerivedClass", fileName = "JavaTest.java")
