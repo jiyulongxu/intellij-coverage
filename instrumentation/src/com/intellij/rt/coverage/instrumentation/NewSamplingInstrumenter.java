@@ -25,6 +25,7 @@ public class NewSamplingInstrumenter extends Instrumenter {
     private static final String LINE_HITS_FIELD_NAME = "__$lineHits$__";
     private static final String LINE_HITS_FIELD_TYPE = "[I";
     private static final String LINE_HITS_FIELD_INIT_NAME = "__$lineHitsInit$__";
+    private static final String LINE_HITS_LOCAL_VARIABLE_NAME = "__$localLineHits$__";
 
     private final String myClassNameType;
     private final ClassReader myReader;
@@ -49,25 +50,30 @@ public class NewSamplingInstrumenter extends Instrumenter {
         final String signature,
         final String[] exceptions
     ) {
-        final MethodVisitor visitor = new MethodVisitor(Opcodes.API_VERSION, mv) {
+        final MethodVisitor visitor = new InstrumentationUtils.LocalVariableInserter(mv, access, desc, LINE_HITS_LOCAL_VARIABLE_NAME, LINE_HITS_FIELD_TYPE) {
             public void visitLineNumber(final int line, final Label start) {
                 getOrCreateLineData(line, name, desc);
 
-                //prepare for store: load array and index
-                visitFieldInsn(Opcodes.GETSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
-                pushInstruction(mv, line);
+                mv.visitVarInsn(Opcodes.ALOAD, getLocalVariableIndex());
+                InstrumentationUtils.pushInt(mv, line);
 
                 mv.visitInsn(Opcodes.DUP2);
                 //load array[index]
-                visitInsn(Opcodes.IALOAD);
+                mv.visitInsn(Opcodes.IALOAD);
 
                 //increment
-                visitInsn(Opcodes.ICONST_1);
-                visitInsn(Opcodes.IADD);
+                mv.visitInsn(Opcodes.ICONST_1);
+                mv.visitInsn(Opcodes.IADD);
 
                 //stack: array, index, incremented value: store value in array[index]
-                visitInsn(Opcodes.IASTORE);
-                super.visitLineNumber(line, start);
+                mv.visitInsn(Opcodes.IASTORE);
+                mv.visitLineNumber(line, start);
+            }
+
+            public void visitCode() {
+                mv.visitFieldInsn(Opcodes.GETSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
+                mv.visitVarInsn(Opcodes.ASTORE, getLocalVariableIndex());
+                super.visitCode();
             }
         };
         return myExtraFieldInstrumenter.createMethodVisitor(this, mv, visitor, name);
@@ -94,7 +100,7 @@ public class NewSamplingInstrumenter extends Instrumenter {
         public void initField(MethodVisitor mv) {
             myMaxLineNumber = new LineCounter(NewSamplingInstrumenter.this).calcMaxLineNumber(myReader);
             mv.visitLdcInsn(getClassName());
-            pushInstruction(mv, myMaxLineNumber + 1);
+            InstrumentationUtils.pushInt(mv, myMaxLineNumber + 1);
             mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_INT);
 
             //register line array
@@ -102,15 +108,6 @@ public class NewSamplingInstrumenter extends Instrumenter {
 
             //ensure same line array loaded in different class loaders
             mv.visitFieldInsn(Opcodes.PUTSTATIC, myClassNameType, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE);
-        }
-    }
-
-    private static void pushInstruction(MethodVisitor mv, int operand) {
-        if (operand <= Short.MAX_VALUE) {
-            mv.visitIntInsn(Opcodes.SIPUSH, operand);
-        }
-        else {
-            mv.visitLdcInsn(operand);
         }
     }
 }
