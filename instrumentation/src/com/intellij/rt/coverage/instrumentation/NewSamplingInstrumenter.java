@@ -28,7 +28,7 @@ public class NewSamplingInstrumenter extends Instrumenter {
 
     private final String myClassNameType;
     private final ClassReader myReader;
-    private final ArrayInstrumenter myArrayInstrumenter;
+    private final ExtraFieldInstrumenter myExtraFieldInstrumenter;
 
     public NewSamplingInstrumenter(final ProjectData projectData,
                                    final ClassVisitor classVisitor,
@@ -36,7 +36,7 @@ public class NewSamplingInstrumenter extends Instrumenter {
                                    final String className,
                                    final boolean shouldCalculateSource) {
         super(projectData, classVisitor, className, shouldCalculateSource);
-        myArrayInstrumenter = new ArraySamplingInstrumenter(cr, className);
+        myExtraFieldInstrumenter = new ExtraFieldSamplingInstrumenter(cr, className);
         myClassNameType = className.replace(".", "/");
         myReader = cr;
     }
@@ -70,12 +70,12 @@ public class NewSamplingInstrumenter extends Instrumenter {
                 super.visitLineNumber(line, start);
             }
         };
-        return myArrayInstrumenter.createMethodVisitor(this, mv, visitor, name);
+        return myExtraFieldInstrumenter.createMethodVisitor(this, mv, visitor, name);
     }
 
     @Override
     public void visitEnd() {
-        myArrayInstrumenter.generateMembers(this);
+        myExtraFieldInstrumenter.generateMembers(this);
         super.visitEnd();
     }
 
@@ -85,13 +85,13 @@ public class NewSamplingInstrumenter extends Instrumenter {
         myClassData.setLines(lines);
     }
 
-    private class ArraySamplingInstrumenter extends ArrayInstrumenter {
+    private class ExtraFieldSamplingInstrumenter extends ExtraFieldInstrumenter {
 
-        public ArraySamplingInstrumenter(ClassReader cr, String className) {
+        public ExtraFieldSamplingInstrumenter(ClassReader cr, String className) {
             super(cr, null, className, LINE_HITS_FIELD_NAME, LINE_HITS_FIELD_TYPE, LINE_HITS_FIELD_INIT_NAME, true);
         }
 
-        public void initArray(MethodVisitor mv) {
+        public void initField(MethodVisitor mv) {
             myMaxLineNumber = new LineCounter(NewSamplingInstrumenter.this).calcMaxLineNumber(myReader);
             mv.visitLdcInsn(getClassName());
             pushInstruction(mv, myMaxLineNumber + 1);

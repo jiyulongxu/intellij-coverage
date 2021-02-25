@@ -18,7 +18,7 @@ package com.intellij.rt.coverage.testDiscovery.instrumentation;
 
 import com.intellij.rt.coverage.data.ClassMetadata;
 import com.intellij.rt.coverage.data.TestDiscoveryProjectData;
-import com.intellij.rt.coverage.instrumentation.ArrayInstrumenter;
+import com.intellij.rt.coverage.instrumentation.ExtraFieldInstrumenter;
 import org.jetbrains.coverage.org.objectweb.asm.ClassReader;
 import org.jetbrains.coverage.org.objectweb.asm.ClassWriter;
 import org.jetbrains.coverage.org.objectweb.asm.MethodVisitor;
@@ -26,7 +26,7 @@ import org.jetbrains.coverage.org.objectweb.asm.Opcodes;
 
 import java.util.Collections;
 
-public class TestDiscoveryInstrumenter extends ArrayInstrumenter {
+public class TestDiscoveryInstrumenter extends ExtraFieldInstrumenter {
   private final String myClassName;
   int myClassVersion;
   private final InstrumentedMethodsFilter myMethodFilter;
@@ -111,7 +111,7 @@ public class TestDiscoveryInstrumenter extends ArrayInstrumenter {
    * and store result in the field {@link TestDiscoveryInstrumenter#METHODS_VISITED}
    */
   @Override
-  public void initArray(MethodVisitor mv) {
+  public void initField(MethodVisitor mv) {
     mv.visitLdcInsn(myClassName);
     pushInstruction(mv, myMethodNames.length);
     mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_BOOLEAN);
